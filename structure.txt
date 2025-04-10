@@ -1,0 +1,66 @@
+travel-threads/
+├── public/
+│   ├── index.html
+│   └── favicon.ico
+├── src/
+│   ├── assets/
+│   │   └── (static files like images)
+│   ├── components/
+│   │   ├── Auth/
+│   │   │   ├── Login.tsx
+│   │   │   ├── Signup.tsx
+│   │   │   └── index.ts
+│   │   ├── Post/
+│   │   │   ├── Post.tsx
+│   │   │   └── index.ts
+│   │   ├── Search/
+│   │   │   ├── SearchBar.tsx
+│   │   │   ├── SearchResults.tsx
+│   │   │   └── index.ts
+│   │   ├── Profile/
+│   │   │   ├── ProfileInfo.tsx
+│   │   │   ├── EditProfile.tsx
+│   │   │   └── index.ts
+│   │   ├── Messaging/
+│   │   │   ├── MessageList.tsx
+│   │   │   ├── SendMessage.tsx
+│   │   │   └── index.ts
+│   │   ├── Shared/
+│   │   │   └── Layout/
+│   │   │       ├── Header.tsx
+│   │   │       ├── Footer.tsx
+│   │   │       └── index.ts
+│   ├── pages/
+│   │   ├── Home.tsx
+│   │   ├── ProfilePage.tsx
+│   │   ├── PostPage.tsx
+│   │   ├── CreatePostPage.tsx
+│   │   ├── SearchPage.tsx
+│   │   ├── MessagingPage.tsx
+│   │   └── AdminPage.tsx
+│   ├── routes/
+│   │   └── AppRoutes.tsx
+│   ├── services/
+│   │   ├── auth.ts
+│   │   ├── firestore.ts
+│   │   ├── storage.ts
+│   │   └── index.ts
+│   ├── contexts/
+│   │   └── AuthContext.tsx
+│   ├── hooks/
+│   │   └── useAuth.ts
+│   ├── utils/
+│   │   └── helpers.ts
+│   ├── styles/
+│   │   └── theme.ts
+│   ├── types/
+│   │   ├── post.ts
+│   │   └── user.ts
+│   ├── travel/
+│   │   └── components/
+│   │       └── Map.tsx
+│   ├── firebase.ts
+│   ├── App.tsx
+│   └── index.tsx
+├── tsconfig.json
+└── package.json
