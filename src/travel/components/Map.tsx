@@ -1,63 +1,59 @@
-'use client';
+"use client"
 
-import { useEffect, useState } from 'react';
-import {
-  GoogleMap,
-  LoadScript,
-  Marker,
-  InfoWindow,
-} from '@react-google-maps/api';
-import { Box, Typography, Button } from '@mui/material';
-import { Link } from 'react-router-dom';
+import { useEffect, useState } from "react"
+import { GoogleMap, LoadScript, Marker, InfoWindow } from "@react-google-maps/api"
+import { Box, Typography, Button } from "@mui/material"
+import { Link } from "react-router-dom"
+import { GOOGLE_MAPS_API_KEY } from "../../utils/constants"
 
 interface MapProps {
-  lat: number;
-  lng: number;
+  lat: number
+  lng: number
   posts?: Array<{
-    id: string;
-    title: string;
-    content: string;
+    id: string
+    title: string
+    content: string
     location?: {
-      lat: number;
-      lng: number;
-      name?: string;
-    };
-    imageUrl?: string;
-  }>;
-  zoom?: number;
+      lat: number
+      lng: number
+      name?: string
+    }
+    imageUrl?: string
+  }>
+  zoom?: number
 }
 
 const Map = ({ lat, lng, posts = [], zoom = 10 }: MapProps) => {
-  const mapStyles = { height: '100%', width: '100%' };
-  const defaultCenter = { lat, lng };
-  const [selectedPost, setSelectedPost] = useState<any>(null);
-  const [mapInstance, setMapInstance] = useState<google.maps.Map | null>(null);
+  const mapStyles = { height: "100%", width: "100%" }
+  const defaultCenter = { lat, lng }
+  const [selectedPost, setSelectedPost] = useState<any>(null)
+  const [mapInstance, setMapInstance] = useState<google.maps.Map | null>(null)
 
   // If showing multiple posts, fit the map to show all markers
   useEffect(() => {
     if (mapInstance && posts && posts.length > 1) {
-      const bounds = new (window as any).google.maps.LatLngBounds();
+      const bounds = new google.maps.LatLngBounds()
       posts.forEach((post) => {
         if (post.location?.lat && post.location?.lng) {
           bounds.extend({
             lat: post.location.lat,
             lng: post.location.lng,
-          });
+          })
         }
-      });
-      mapInstance.fitBounds(bounds);
+      })
+      mapInstance.fitBounds(bounds)
     }
-  }, [posts, mapInstance]);
+  }, [posts, mapInstance])
 
   // Close InfoWindow when clicking on map
   const handleMapClick = () => {
     if (selectedPost) {
-      setSelectedPost(null);
+      setSelectedPost(null)
     }
-  };
+  }
 
   return (
-    <LoadScript googleMapsApiKey="AIzaSyCX4xwYTwIDjj64ZULpmz-Osy4NNfRrSiE">
+    <LoadScript googleMapsApiKey={GOOGLE_MAPS_API_KEY}>
       <GoogleMap
         mapContainerStyle={mapStyles}
         zoom={zoom}
@@ -81,7 +77,7 @@ const Map = ({ lat, lng, posts = [], zoom = 10 }: MapProps) => {
                 }}
                 onClick={() => setSelectedPost(post)}
               />
-            )
+            ),
         )}
 
         {/* Info window for selected post */}
@@ -100,12 +96,12 @@ const Map = ({ lat, lng, posts = [], zoom = 10 }: MapProps) => {
 
               {selectedPost.imageUrl && (
                 <img
-                  src={selectedPost.imageUrl || '/placeholder.svg'}
+                  src={selectedPost.imageUrl || "/placeholder.svg"}
                   alt={selectedPost.title}
                   style={{
-                    width: '100%',
+                    width: "100%",
                     height: 120,
-                    objectFit: 'cover',
+                    objectFit: "cover",
                     marginBottom: 8,
                     borderRadius: 4,
                   }}
@@ -114,16 +110,10 @@ const Map = ({ lat, lng, posts = [], zoom = 10 }: MapProps) => {
 
               <Typography variant="body2" sx={{ mb: 1 }}>
                 {selectedPost.content.substring(0, 100)}
-                {selectedPost.content.length > 100 ? '...' : ''}
+                {selectedPost.content.length > 100 ? "..." : ""}
               </Typography>
 
-              <Button
-                component={Link}
-                to={`/post/${selectedPost.id}`}
-                size="small"
-                variant="outlined"
-                fullWidth
-              >
+              <Button component={Link} to={`/post/${selectedPost.id}`} size="small" variant="outlined" fullWidth>
                 View Post
               </Button>
             </Box>
@@ -131,7 +121,7 @@ const Map = ({ lat, lng, posts = [], zoom = 10 }: MapProps) => {
         )}
       </GoogleMap>
     </LoadScript>
-  );
-};
+  )
+}
 
-export default Map;
+export default Map

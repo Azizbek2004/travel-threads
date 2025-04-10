@@ -1,34 +1,29 @@
-'use client';
+"use client"
 
-import type React from 'react';
+import type React from "react"
 
-import { Routes, Route, Navigate } from 'react-router-dom';
-import {
-  Home,
-  ProfilePage,
-  PostPage,
-  CreatePostPage,
-  SearchPage,
-  MessagingPage,
-  AdminPage,
-} from '../pages';
-import ConversationsPage from '../pages/ConversationsPage';
-import { Login, Signup } from '../components/Auth';
-import { useAuth } from '../hooks/useAuth';
+import { Routes, Route, Navigate } from "react-router-dom"
+import { Home, ProfilePage, PostPage, CreatePostPage, SearchPage, MessagingPage, AdminPage } from "../pages"
+import ConversationsPage from "../pages/ConversationsPage"
+import EventsPage from "../pages/Eventspage"
+import EventDetailPage from "../pages/EventDetailPage"
+import CreateEventPage from "../pages/CreateEventPage"
+import { Login, Signup } from "../components/Auth"
+import { useAuth } from "../hooks/useAuth"
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  const { currentUser, loading } = useAuth();
+  const { currentUser, loading } = useAuth()
 
   if (loading) {
-    return <div>Loading...</div>;
+    return <div>Loading...</div>
   }
 
   if (!currentUser) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/login" replace />
   }
 
-  return <>{children}</>;
-};
+  return <>{children}</>
+}
 
 const AppRoutes = () => (
   <Routes>
@@ -60,6 +55,16 @@ const AppRoutes = () => (
         </ProtectedRoute>
       }
     />
+    <Route path="/events" element={<EventsPage />} />
+    <Route path="/event/:id" element={<EventDetailPage />} />
+    <Route
+      path="/create-event"
+      element={
+        <ProtectedRoute>
+          <CreateEventPage />
+        </ProtectedRoute>
+      }
+    />
     <Route
       path="/admin"
       element={
@@ -71,6 +76,6 @@ const AppRoutes = () => (
     <Route path="/login" element={<Login />} />
     <Route path="/signup" element={<Signup />} />
   </Routes>
-);
+)
 
-export default AppRoutes;
+export default AppRoutes

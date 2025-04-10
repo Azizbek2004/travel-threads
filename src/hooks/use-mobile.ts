@@ -1,29 +1,24 @@
-'use client';
+"use client"
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect } from "react"
 
-export function useMobile() {
-  const [isMobile, setIsMobile] = useState(false);
-  const [isTablet, setIsTablet] = useState(false);
+export const useMobile = () => {
+  const [isMobileOrTablet, setIsMobileOrTablet] = useState(false)
 
   useEffect(() => {
-    // Handler to call on window resize
-    function handleResize() {
-      // Mobile devices (phones)
-      setIsMobile(window.innerWidth < 768);
-      // Tablet devices
-      setIsTablet(window.innerWidth >= 768 && window.innerWidth < 991);
+    const handleResize = () => {
+      setIsMobileOrTablet(window.innerWidth <= 768)
     }
 
-    // Add event listener
-    window.addEventListener('resize', handleResize);
+    // Set initial value
+    handleResize()
 
-    // Call handler right away so state gets updated with initial window size
-    handleResize();
+    // Listen for window resize events
+    window.addEventListener("resize", handleResize)
 
     // Remove event listener on cleanup
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
+    return () => window.removeEventListener("resize", handleResize)
+  }, [])
 
-  return { isMobile, isTablet, isMobileOrTablet: isMobile || isTablet };
+  return { isMobileOrTablet }
 }
