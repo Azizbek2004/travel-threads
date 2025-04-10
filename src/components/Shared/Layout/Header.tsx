@@ -210,12 +210,7 @@ const Header = () => {
               InputProps={{
                 startAdornment: (
                   <InputAdornment position="start">
-                    <span
-                      className="material-icons-outlined"
-                      style={{ fontSize: 20 }}
-                    >
-                      search
-                    </span>
+                   
                   </InputAdornment>
                 ),
               }}
