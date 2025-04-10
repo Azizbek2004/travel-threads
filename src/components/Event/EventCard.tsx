@@ -1,8 +1,8 @@
-'use client';
+"use client"
 
-import type React from 'react';
+import type React from "react"
 
-import { useState } from 'react';
+import { useState } from "react"
 import {
   Card,
   CardContent,
@@ -16,155 +16,128 @@ import {
   Menu,
   MenuItem,
   Divider,
-} from '@mui/material';
-import { Link, useNavigate } from 'react-router-dom';
-import { useAuth } from '../../hooks/useAuth';
-import {
-  attendEvent,
-  cancelAttendance,
-  markInterested,
-} from '../../services/events';
-import { getUserProfile } from '../../services/firestore';
-import { format } from 'date-fns';
-import {
-  CalendarMonth,
-  LocationOn,
-  Person,
-  MoreVert,
-  EventAvailable,
-  EventBusy,
-  Star,
-} from '@mui/icons-material';
-import { useMobile } from '../../hooks/use-mobile';
-import type { Event } from '../../types/event';
+} from "@mui/material"
+import { Link, useNavigate } from "react-router-dom"
+import { useAuth } from "../../hooks/useAuth"
+import { attendEvent, cancelAttendance, markInterested } from "../../services/events"
+import { getUserProfile } from "../../services/firestore"
+import dayjs from "dayjs" // Replace date-fns with dayjs
+import { CalendarMonth, LocationOn, Person, MoreVert, EventAvailable, EventBusy, Star } from "@mui/icons-material"
+import { useMobile } from "../../hooks/use-mobile"
+import type { Event } from "../../types/event"
 
 interface EventCardProps {
-  event: Event;
-  isDetail?: boolean;
+  event: Event
+  isDetail?: boolean
 }
 
 const EventCard = ({ event, isDetail = false }: EventCardProps) => {
-  const { currentUser } = useAuth();
-  const navigate = useNavigate();
-  const { isMobileOrTablet } = useMobile();
+  const { currentUser } = useAuth()
+  const navigate = useNavigate()
+  const { isMobileOrTablet } = useMobile()
 
-  const [author, setAuthor] = useState<any>(null);
-  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
-  const [isAttending, setIsAttending] = useState(
-    event.attendees?.includes(currentUser?.uid || '') || false
-  );
-  const [isInterested, setIsInterested] = useState(
-    event.interested?.includes(currentUser?.uid || '') || false
-  );
-  const [attendeeCount, setAttendeeCount] = useState(
-    event.attendees?.length || 0
-  );
-  const [interestedCount, setInterestedCount] = useState(
-    event.interested?.length || 0
-  );
+  const [author, setAuthor] = useState<any>(null)
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null)
+  const [isAttending, setIsAttending] = useState(event.attendees?.includes(currentUser?.uid || "") || false)
+  const [isInterested, setIsInterested] = useState(event.interested?.includes(currentUser?.uid || "") || false)
+  const [attendeeCount, setAttendeeCount] = useState(event.attendees?.length || 0)
+  const [interestedCount, setInterestedCount] = useState(event.interested?.length || 0)
 
   // Fetch author details
   useState(() => {
     const fetchAuthor = async () => {
       if (event.authorId) {
-        const authorData = await getUserProfile(event.authorId);
-        setAuthor(authorData);
+        const authorData = await getUserProfile(event.authorId)
+        setAuthor(authorData)
       }
-    };
-    fetchAuthor();
-  });
+    }
+    fetchAuthor()
+  })
 
   const handleMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
-    setAnchorEl(event.currentTarget);
-  };
+    setAnchorEl(event.currentTarget)
+  }
 
   const handleMenuClose = () => {
-    setAnchorEl(null);
-  };
+    setAnchorEl(null)
+  }
 
   const handleAttend = async () => {
     if (!currentUser) {
-      navigate('/login', { state: { from: `/event/${event.id}` } });
-      return;
+      navigate("/login", { state: { from: `/event/${event.id}` } })
+      return
     }
 
     try {
       if (isAttending) {
-        await cancelAttendance(event.id, currentUser.uid);
-        setIsAttending(false);
-        setAttendeeCount((prev) => prev - 1);
+        await cancelAttendance(event.id, currentUser.uid)
+        setIsAttending(false)
+        setAttendeeCount((prev) => prev - 1)
       } else {
-        await attendEvent(event.id, currentUser.uid);
-        setIsAttending(true);
-        setAttendeeCount((prev) => prev + 1);
+        await attendEvent(event.id, currentUser.uid)
+        setIsAttending(true)
+        setAttendeeCount((prev) => prev + 1)
         // If they were interested, they're now attending instead
         if (isInterested) {
-          setIsInterested(false);
-          setInterestedCount((prev) => prev - 1);
+          setIsInterested(false)
+          setInterestedCount((prev) => prev - 1)
         }
       }
     } catch (error) {
-      console.error('Error updating attendance:', error);
+      console.error("Error updating attendance:", error)
     }
-  };
+  }
 
   const handleInterested = async () => {
     if (!currentUser) {
-      navigate('/login', { state: { from: `/event/${event.id}` } });
-      return;
+      navigate("/login", { state: { from: `/event/${event.id}` } })
+      return
     }
 
     try {
       if (isInterested) {
         // Currently no API to remove interest, so we'll just toggle the UI
-        setIsInterested(false);
-        setInterestedCount((prev) => prev - 1);
+        setIsInterested(false)
+        setInterestedCount((prev) => prev - 1)
       } else {
-        await markInterested(event.id, currentUser.uid);
-        setIsInterested(true);
-        setInterestedCount((prev) => prev + 1);
+        await markInterested(event.id, currentUser.uid)
+        setIsInterested(true)
+        setInterestedCount((prev) => prev + 1)
       }
     } catch (error) {
-      console.error('Error updating interest:', error);
+      console.error("Error updating interest:", error)
     }
-  };
+  }
 
-  // Format dates
-  const startDate = new Date(event.startDate);
-  const endDate = new Date(event.endDate);
-  const formattedStartDate = format(startDate, 'MMM d, yyyy');
-  const formattedStartTime = format(startDate, 'h:mm a');
-  const formattedEndDate = format(endDate, 'MMM d, yyyy');
-  const formattedEndTime = format(endDate, 'h:mm a');
+  // Format dates with dayjs
+  const startDate = dayjs(event.startDate)
+  const endDate = dayjs(event.endDate)
+  const formattedStartDate = startDate.format("MMM D, YYYY")
+  const formattedStartTime = startDate.format("h:mm A")
+  const formattedEndDate = endDate.format("MMM D, YYYY")
+  const formattedEndTime = endDate.format("h:mm A")
 
-  const isSameDay = formattedStartDate === formattedEndDate;
+  const isSameDay = formattedStartDate === formattedEndDate
 
   // Mobile layout
   if (isMobileOrTablet) {
     return (
-      <Card sx={{ mb: 2, borderRadius: 2, overflow: 'hidden' }}>
-        {event.imageUrl && (
-          <CardMedia
-            component="img"
-            height="140"
-            image={event.imageUrl}
-            alt={event.title}
-          />
-        )}
+      <Card sx={{ mb: 2, borderRadius: 2, overflow: "hidden" }}>
+        {event.imageUrl && <CardMedia component="img" height="140" image={event.imageUrl} alt={event.title} />}
 
         <CardContent sx={{ p: 2 }}>
           <Box
             sx={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'flex-start',
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "flex-start",
             }}
           >
             <Typography
               variant="h6"
               component={Link}
               to={`/event/${event.id}`}
-              sx={{ textDecoration: 'none', color: 'text.primary', mb: 1 }}
+              sx={{ textDecoration: "none", color: "text.primary", mb: 1 }}
             >
               {event.title}
             </Typography>
@@ -174,11 +147,8 @@ const EventCard = ({ event, isDetail = false }: EventCardProps) => {
             </IconButton>
           </Box>
 
-          <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-            <CalendarMonth
-              fontSize="small"
-              sx={{ mr: 1, color: 'text.secondary' }}
-            />
+          <Box sx={{ display: "flex", alignItems: "center", mb: 1 }}>
+            <CalendarMonth fontSize="small" sx={{ mr: 1, color: "text.secondary" }} />
             <Typography variant="body2" color="text.secondary">
               {isSameDay
                 ? `${formattedStartDate}, ${formattedStartTime} - ${formattedEndTime}`
@@ -187,39 +157,29 @@ const EventCard = ({ event, isDetail = false }: EventCardProps) => {
           </Box>
 
           {event.location?.name && (
-            <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-              <LocationOn
-                fontSize="small"
-                sx={{ mr: 1, color: 'text.secondary' }}
-              />
+            <Box sx={{ display: "flex", alignItems: "center", mb: 1 }}>
+              <LocationOn fontSize="small" sx={{ mr: 1, color: "text.secondary" }} />
               <Typography variant="body2" color="text.secondary" noWrap>
                 {event.location.name}
               </Typography>
             </Box>
           )}
 
-          <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-            <Person fontSize="small" sx={{ mr: 1, color: 'text.secondary' }} />
+          <Box sx={{ display: "flex", alignItems: "center", mb: 1 }}>
+            <Person fontSize="small" sx={{ mr: 1, color: "text.secondary" }} />
             <Typography variant="body2" color="text.secondary">
-              {attendeeCount} {attendeeCount === 1 ? 'attendee' : 'attendees'}
+              {attendeeCount} {attendeeCount === 1 ? "attendee" : "attendees"}
             </Typography>
           </Box>
 
           <Chip
-            label={
-              event.category.charAt(0).toUpperCase() + event.category.slice(1)
-            }
+            label={event.category.charAt(0).toUpperCase() + event.category.slice(1)}
             size="small"
             sx={{ mr: 1, mb: 1 }}
           />
 
           {event.price && (
-            <Chip
-              label={`${event.price} ${event.currency || 'USD'}`}
-              size="small"
-              color="primary"
-              sx={{ mb: 1 }}
-            />
+            <Chip label={`${event.price} ${event.currency || "USD"}`} size="small" color="primary" sx={{ mb: 1 }} />
           )}
 
           {!isDetail && (
@@ -229,26 +189,26 @@ const EventCard = ({ event, isDetail = false }: EventCardProps) => {
               sx={{
                 mt: 1,
                 mb: 2,
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                display: '-webkit-box',
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                display: "-webkit-box",
                 WebkitLineClamp: 2,
-                WebkitBoxOrient: 'vertical',
+                WebkitBoxOrient: "vertical",
               }}
             >
               {event.description}
             </Typography>
           )}
 
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 2 }}>
+          <Box sx={{ display: "flex", justifyContent: "space-between", mt: 2 }}>
             <Button
-              variant={isAttending ? 'outlined' : 'contained'}
+              variant={isAttending ? "outlined" : "contained"}
               size="small"
               startIcon={isAttending ? <EventBusy /> : <EventAvailable />}
               onClick={handleAttend}
               sx={{ flexGrow: 1, mr: 1 }}
             >
-              {isAttending ? 'Cancel' : 'Attend'}
+              {isAttending ? "Cancel" : "Attend"}
             </Button>
 
             <Button
@@ -256,75 +216,56 @@ const EventCard = ({ event, isDetail = false }: EventCardProps) => {
               size="small"
               startIcon={<Star />}
               onClick={handleInterested}
-              color={isInterested ? 'primary' : 'inherit'}
+              color={isInterested ? "primary" : "inherit"}
               sx={{ flexGrow: 1 }}
             >
-              {isInterested ? 'Interested' : 'Interest'}
+              {isInterested ? "Interested" : "Interest"}
             </Button>
           </Box>
         </CardContent>
 
         {/* Menu */}
-        <Menu
-          anchorEl={anchorEl}
-          open={Boolean(anchorEl)}
-          onClose={handleMenuClose}
-        >
-          <MenuItem
-            component={Link}
-            to={`/event/${event.id}`}
-            onClick={handleMenuClose}
-          >
+        <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={handleMenuClose}>
+          <MenuItem component={Link} to={`/event/${event.id}`} onClick={handleMenuClose}>
             View Details
           </MenuItem>
           {currentUser && currentUser.uid === event.authorId && (
-            <MenuItem
-              component={Link}
-              to={`/edit-event/${event.id}`}
-              onClick={handleMenuClose}
-            >
+            <MenuItem component={Link} to={`/edit-event/${event.id}`} onClick={handleMenuClose}>
               Edit Event
             </MenuItem>
           )}
           <MenuItem onClick={handleMenuClose}>Share Event</MenuItem>
         </Menu>
       </Card>
-    );
+    )
   }
 
   // Desktop layout
   return (
     <Card
       sx={{
-        height: '100%',
-        display: 'flex',
-        flexDirection: 'column',
+        height: "100%",
+        display: "flex",
+        flexDirection: "column",
         borderRadius: 2,
-        overflow: 'hidden',
+        overflow: "hidden",
       }}
     >
-      {event.imageUrl && (
-        <CardMedia
-          component="img"
-          height="200"
-          image={event.imageUrl}
-          alt={event.title}
-        />
-      )}
+      {event.imageUrl && <CardMedia component="img" height="200" image={event.imageUrl} alt={event.title} />}
 
       <CardContent sx={{ flexGrow: 1, p: 3 }}>
         <Box
           sx={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'flex-start',
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "flex-start",
           }}
         >
           <Typography
             variant="h5"
             component={Link}
             to={`/event/${event.id}`}
-            sx={{ textDecoration: 'none', color: 'text.primary', mb: 2 }}
+            sx={{ textDecoration: "none", color: "text.primary", mb: 2 }}
           >
             {event.title}
           </Typography>
@@ -334,8 +275,8 @@ const EventCard = ({ event, isDetail = false }: EventCardProps) => {
           </IconButton>
         </Box>
 
-        <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-          <CalendarMonth sx={{ mr: 1, color: 'text.secondary' }} />
+        <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
+          <CalendarMonth sx={{ mr: 1, color: "text.secondary" }} />
           <Typography variant="body1" color="text.secondary">
             {isSameDay
               ? `${formattedStartDate}, ${formattedStartTime} - ${formattedEndTime}`
@@ -344,36 +285,26 @@ const EventCard = ({ event, isDetail = false }: EventCardProps) => {
         </Box>
 
         {event.location?.name && (
-          <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-            <LocationOn sx={{ mr: 1, color: 'text.secondary' }} />
+          <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
+            <LocationOn sx={{ mr: 1, color: "text.secondary" }} />
             <Typography variant="body1" color="text.secondary">
               {event.location.name}
             </Typography>
           </Box>
         )}
 
-        <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-          <Person sx={{ mr: 1, color: 'text.secondary' }} />
+        <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
+          <Person sx={{ mr: 1, color: "text.secondary" }} />
           <Typography variant="body1" color="text.secondary">
-            {attendeeCount} {attendeeCount === 1 ? 'attendee' : 'attendees'}
+            {attendeeCount} {attendeeCount === 1 ? "attendee" : "attendees"}
             {event.maxAttendees && ` (max ${event.maxAttendees})`}
           </Typography>
         </Box>
 
         <Box sx={{ mb: 2 }}>
-          <Chip
-            label={
-              event.category.charAt(0).toUpperCase() + event.category.slice(1)
-            }
-            sx={{ mr: 1 }}
-          />
+          <Chip label={event.category.charAt(0).toUpperCase() + event.category.slice(1)} sx={{ mr: 1 }} />
 
-          {event.price && (
-            <Chip
-              label={`${event.price} ${event.currency || 'USD'}`}
-              color="primary"
-            />
-          )}
+          {event.price && <Chip label={`${event.price} ${event.currency || "USD"}`} color="primary" />}
         </Box>
 
         {!isDetail && (
@@ -382,11 +313,11 @@ const EventCard = ({ event, isDetail = false }: EventCardProps) => {
             color="text.secondary"
             sx={{
               mb: 3,
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              display: '-webkit-box',
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              display: "-webkit-box",
               WebkitLineClamp: 3,
-              WebkitBoxOrient: 'vertical',
+              WebkitBoxOrient: "vertical",
             }}
           >
             {event.description}
@@ -394,12 +325,8 @@ const EventCard = ({ event, isDetail = false }: EventCardProps) => {
         )}
 
         {author && (
-          <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-            <Avatar
-              src={author.photoURL}
-              alt={author.displayName}
-              sx={{ width: 24, height: 24, mr: 1 }}
-            />
+          <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
+            <Avatar src={author.photoURL} alt={author.displayName} sx={{ width: 24, height: 24, mr: 1 }} />
             <Typography variant="body2" color="text.secondary">
               Created by {author.displayName}
             </Typography>
@@ -408,59 +335,47 @@ const EventCard = ({ event, isDetail = false }: EventCardProps) => {
 
         <Divider sx={{ my: 2 }} />
 
-        <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+        <Box sx={{ display: "flex", justifyContent: "space-between" }}>
           <Button
-            variant={isAttending ? 'outlined' : 'contained'}
+            variant={isAttending ? "outlined" : "contained"}
             startIcon={isAttending ? <EventBusy /> : <EventAvailable />}
             onClick={handleAttend}
             sx={{ flexGrow: 1, mr: 1 }}
           >
-            {isAttending ? 'Cancel Attendance' : 'Attend Event'}
+            {isAttending ? "Cancel Attendance" : "Attend Event"}
           </Button>
 
           <Button
             variant="outlined"
             startIcon={<Star />}
             onClick={handleInterested}
-            color={isInterested ? 'primary' : 'inherit'}
+            color={isInterested ? "primary" : "inherit"}
             sx={{ flexGrow: 1 }}
           >
-            {isInterested ? 'Interested' : "I'm Interested"}
+            {isInterested ? "Interested" : "I'm Interested"}
           </Button>
         </Box>
       </CardContent>
 
       {/* Menu */}
-      <Menu
-        anchorEl={anchorEl}
-        open={Boolean(anchorEl)}
-        onClose={handleMenuClose}
-      >
-        <MenuItem
-          component={Link}
-          to={`/event/${event.id}`}
-          onClick={handleMenuClose}
-        >
+      <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={handleMenuClose}>
+        <MenuItem component={Link} to={`/event/${event.id}`} onClick={handleMenuClose}>
           View Details
         </MenuItem>
         {currentUser && currentUser.uid === event.authorId && (
-          <MenuItem
-            component={Link}
-            to={`/edit-event/${event.id}`}
-            onClick={handleMenuClose}
-          >
+          <MenuItem component={Link} to={`/edit-event/${event.id}`} onClick={handleMenuClose}>
             Edit Event
           </MenuItem>
         )}
         <MenuItem onClick={handleMenuClose}>Share Event</MenuItem>
         {currentUser && currentUser.uid === event.authorId && (
-          <MenuItem onClick={handleMenuClose} sx={{ color: 'error.main' }}>
+          <MenuItem onClick={handleMenuClose} sx={{ color: "error.main" }}>
             Delete Event
           </MenuItem>
         )}
       </Menu>
     </Card>
-  );
-};
+  )
+}
 
-export default EventCard;
+export default EventCard

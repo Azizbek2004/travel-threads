@@ -18,7 +18,7 @@ import {
 import { ArrowBack, CalendarMonth, LocationOn, Person, AttachMoney } from "@mui/icons-material"
 import { getEvent } from "../services/events"
 import { getUserProfile } from "../services/firestore"
-import { format } from "date-fns"
+import dayjs from "dayjs"
 import Map from "../travel/components/Map"
 import { useMobile } from "../hooks/use-mobile"
 import type { Event } from "../types/event"
@@ -88,12 +88,12 @@ const EventDetailPage = () => {
   }
 
   // Format dates
-  const startDate = new Date(event.startDate)
-  const endDate = new Date(event.endDate)
-  const formattedStartDate = format(startDate, "EEEE, MMMM d, yyyy")
-  const formattedStartTime = format(startDate, "h:mm a")
-  const formattedEndDate = format(endDate, "EEEE, MMMM d, yyyy")
-  const formattedEndTime = format(endDate, "h:mm a")
+  const startDate = dayjs(event.startDate)
+  const endDate = dayjs(event.endDate)
+  const formattedStartDate = startDate.format("dddd, MMMM D, YYYY")
+  const formattedStartTime = startDate.format("h:mm A")
+  const formattedEndDate = endDate.format("dddd, MMMM D, YYYY")
+  const formattedEndTime = endDate.format("h:mm A")
   const isSameDay = formattedStartDate === formattedEndDate
 
   // Mobile layout

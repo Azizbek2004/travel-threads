@@ -1,8 +1,8 @@
-'use client';
+"use client"
 
-import type React from 'react';
+import type React from "react"
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from "react"
 import {
   TextField,
   Button,
@@ -26,122 +26,111 @@ import {
   InputLabel,
   Grid,
   Chip,
-} from '@mui/material';
-import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
-import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
-import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
-import { useAuth } from '../hooks/useAuth';
-import { createEvent } from '../services/events';
-import { uploadImage } from '../services/storage';
-import { useNavigate, Navigate } from 'react-router-dom';
-import {
-  Image,
-  Close,
-  LocationOn,
-  ArrowBack,
-  Add as AddIcon,
-} from '@mui/icons-material';
-import { useMobile } from '../hooks/use-mobile';
-import type { EventCategoryType } from '../types/event';
+} from "@mui/material"
+import { DateTimePicker } from "@mui/x-date-pickers/DateTimePicker"
+import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs"
+import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider"
+import { useAuth } from "../hooks/useAuth"
+import { createEvent } from "../services/events"
+import { uploadImage } from "../services/storage"
+import { useNavigate, Navigate } from "react-router-dom"
+import { Image, Close, LocationOn, ArrowBack, Add as AddIcon } from "@mui/icons-material"
+import { useMobile } from "../hooks/use-mobile"
+import type { EventCategoryType } from "../types/event"
+import dayjs from "dayjs"
 
 const eventCategories: EventCategoryType[] = [
-  'travel',
-  'food',
-  'culture',
-  'adventure',
-  'nature',
-  'workshop',
-  'meetup',
-  'festival',
-  'concert',
-  'sports',
-  'other',
-];
+  "travel",
+  "food",
+  "culture",
+  "adventure",
+  "nature",
+  "workshop",
+  "meetup",
+  "festival",
+  "concert",
+  "sports",
+  "other",
+]
 
 const CreateEventPage = () => {
-  const { currentUser } = useAuth();
-  const navigate = useNavigate();
-  const { isMobileOrTablet } = useMobile();
+  const { currentUser } = useAuth()
+  const navigate = useNavigate()
+  const { isMobileOrTablet } = useMobile()
 
   // Event details
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const [startDate, setStartDate] = useState<Date | null>(new Date());
-  const [endDate, setEndDate] = useState<Date | null>(
-    new Date(Date.now() + 3600000)
-  ); // Default to 1 hour later
-  const [category, setCategory] = useState<EventCategoryType>('travel');
-  const [isPublic, setIsPublic] = useState(true);
-  const [maxAttendees, setMaxAttendees] = useState<string>('');
-  const [price, setPrice] = useState<string>('');
-  const [currency, setCurrency] = useState('USD');
-  const [website, setWebsite] = useState('');
-  const [contactEmail, setContactEmail] = useState('');
-  const [contactPhone, setContactPhone] = useState('');
+  const [title, setTitle] = useState("")
+  const [description, setDescription] = useState("")
+  const [startDate, setStartDate] = useState(dayjs())
+  const [endDate, setEndDate] = useState(dayjs().add(1, "hour"))
+  const [category, setCategory] = useState<EventCategoryType>("travel")
+  const [isPublic, setIsPublic] = useState(true)
+  const [maxAttendees, setMaxAttendees] = useState<string>("")
+  const [price, setPrice] = useState<string>("")
+  const [currency, setCurrency] = useState("USD")
+  const [website, setWebsite] = useState("")
+  const [contactEmail, setContactEmail] = useState("")
+  const [contactPhone, setContactPhone] = useState("")
 
   // Tags
-  const [tags, setTags] = useState<string[]>([]);
-  const [tagInput, setTagInput] = useState('');
+  const [tags, setTags] = useState<string[]>([])
+  const [tagInput, setTagInput] = useState("")
 
   // Image
-  const [image, setImage] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [image, setImage] = useState<File | null>(null)
+  const [imagePreview, setImagePreview] = useState<string | null>(null)
 
   // Location
-  const [useCurrentLocation, setUseCurrentLocation] = useState(false);
-  const [locationName, setLocationName] = useState('');
+  const [useCurrentLocation, setUseCurrentLocation] = useState(false)
+  const [locationName, setLocationName] = useState("")
   const [geoLocation, setGeoLocation] = useState<{
-    lat: number;
-    lng: number;
-  } | null>(null);
+    lat: number
+    lng: number
+  } | null>(null)
 
   // UI states
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [snackbarOpen, setSnackbarOpen] = useState(false);
-  const [snackbarMessage, setSnackbarMessage] = useState('');
-  const [snackbarSeverity, setSnackbarSeverity] = useState<'success' | 'error'>(
-    'success'
-  );
+  const [error, setError] = useState<string | null>(null)
+  const [loading, setLoading] = useState(false)
+  const [snackbarOpen, setSnackbarOpen] = useState(false)
+  const [snackbarMessage, setSnackbarMessage] = useState("")
+  const [snackbarSeverity, setSnackbarSeverity] = useState<"success" | "error">("success")
 
   // State to track if geolocation is supported
-  const [geolocationAvailable, setGeolocationAvailable] = useState(false);
+  const [geolocationAvailable, setGeolocationAvailable] = useState(false)
+
+  // Initialize geolocationAvailable state
+  useEffect(() => {
+    setGeolocationAvailable(!!navigator.geolocation)
+  }, [])
 
   // Redirect to login if not authenticated
   if (!currentUser) {
-    return <Navigate to="/login" state={{ from: '/create-event' }} />;
+    return <Navigate to="/login" state={{ from: "/create-event" }} />
   }
+
+  const [locationFetchRequired, setLocationFetchRequired] = useState(false)
 
   const fetchLocationName = useCallback(async (lat: number, lng: number) => {
     try {
       const response = await fetch(
-        `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=AIzaSyCX4xwYTwIDjj64ZULpmz-Osy4NNfRrSiE`
-      );
-      const data = await response.json();
+        `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=AIzaSyCX4xwYTwIDjj64ZULpmz-Osy4NNfRrSiE`,
+      )
+      const data = await response.json()
 
       if (data.results && data.results.length > 0) {
         // Get a readable address (usually the first result is the most specific)
-        const address = data.results[0].formatted_address;
-        setLocationName(address);
+        const address = data.results[0].formatted_address
+        setLocationName(address)
       }
     } catch (error) {
-      console.error('Error fetching location name:', error);
+      console.error("Error fetching location name:", error)
+    } finally {
+      setLocationFetchRequired(false)
     }
-  }, []);
+  }, [])
 
   useEffect(() => {
-    // Check if geolocation is supported
-    if (navigator.geolocation) {
-      setGeolocationAvailable(true);
-    } else {
-      setGeolocationAvailable(false);
-      setError('Geolocation is not supported by your browser.');
-      setUseCurrentLocation(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    let isMounted = true; // Add a flag to track component mount status
+    let isMounted = true // Add a flag to track component mount status
 
     const getLocation = () => {
       if (useCurrentLocation && geolocationAvailable) {
@@ -152,96 +141,98 @@ const CreateEventPage = () => {
               setGeoLocation({
                 lat: position.coords.latitude,
                 lng: position.coords.longitude,
-              });
+              })
 
-              // Try to get location name using reverse geocoding
-              fetchLocationName(
-                position.coords.latitude,
-                position.coords.longitude
-              );
+              setLocationFetchRequired(true)
             }
           },
           (err) => {
             if (isMounted) {
               // Check if component is still mounted before setting state
-              setError('Failed to get current location: ' + err.message);
-              setUseCurrentLocation(false);
+              setError("Failed to get current location: " + err.message)
+              setUseCurrentLocation(false)
             }
-          }
-        );
+          },
+        )
       } else {
-        setGeoLocation(null);
-        setLocationName('');
+        setGeoLocation(null)
+        setLocationName("")
       }
-    };
+    }
 
-    getLocation();
+    getLocation()
 
     return () => {
-      isMounted = false; // Set the flag to false when the component unmounts
-    };
-  }, [useCurrentLocation, geolocationAvailable, fetchLocationName]);
+      isMounted = false // Set the flag to false when the component unmounts
+    }
+  }, [useCurrentLocation, geolocationAvailable])
+
+  useEffect(() => {
+    if (locationFetchRequired && geoLocation) {
+      fetchLocationName(geoLocation.lat, geoLocation.lng)
+    }
+  }, [locationFetchRequired, geoLocation, fetchLocationName])
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
-      const selectedImage = e.target.files[0];
-      setImage(selectedImage);
+      const selectedImage = e.target.files[0]
+      setImage(selectedImage)
 
       // Create preview
-      const reader = new FileReader();
+      const reader = new FileReader()
       reader.onload = () => {
-        setImagePreview(reader.result as string);
-      };
-      reader.readAsDataURL(selectedImage);
+        setImagePreview(reader.result as string)
+      }
+      reader.readAsDataURL(selectedImage)
     }
-  };
+  }
 
   const removeImage = () => {
-    setImage(null);
-    setImagePreview(null);
-  };
+    setImage(null)
+    setImagePreview(null)
+  }
 
   const handleAddTag = () => {
     if (tagInput.trim() && !tags.includes(tagInput.trim())) {
-      setTags([...tags, tagInput.trim()]);
-      setTagInput('');
+      setTags([...tags, tagInput.trim()])
+      setTagInput("")
     }
-  };
+  }
 
   const handleRemoveTag = (tagToRemove: string) => {
-    setTags(tags.filter((tag) => tag !== tagToRemove));
-  };
+    setTags(tags.filter((tag) => tag !== tagToRemove))
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+    e.preventDefault()
     if (!currentUser) {
-      setSnackbarSeverity('error');
-      setSnackbarMessage('You must be logged in to create an event.');
-      setSnackbarOpen(true);
-      return;
+      setSnackbarSeverity("error")
+      setSnackbarMessage("You must be logged in to create an event.")
+      setSnackbarOpen(true)
+      return
     }
 
     if (!title.trim() || !description.trim() || !startDate || !endDate) {
-      setSnackbarSeverity('error');
-      setSnackbarMessage('Please fill in all required fields.');
-      setSnackbarOpen(true);
-      return;
+      setSnackbarSeverity("error")
+      setSnackbarMessage("Please fill in all required fields.")
+      setSnackbarOpen(true)
+      return
     }
 
     if (startDate && endDate && startDate > endDate) {
-      setSnackbarSeverity('error');
-      setSnackbarMessage('End date must be after start date.');
-      setSnackbarOpen(true);
-      return;
+      setSnackbarSeverity("error")
+      setSnackbarMessage("End date must be after start date.")
+      setSnackbarOpen(true)
+      return
     }
 
-    setLoading(true);
-    setError(null);
+    setLoading(true)
+    setError(null)
 
     try {
-      let imageUrl = '';
+      let imageUrl = ""
       if (image) {
-        imageUrl = await uploadImage(image);
+        imageUrl = await uploadImage(image)
       }
 
       const eventData = {
@@ -257,16 +248,16 @@ const CreateEventPage = () => {
         website: website.trim(),
         contactEmail: contactEmail.trim(),
         contactPhone: contactPhone.trim(),
-      } as any;
+      } as any
 
       // Add optional fields if they exist
       if (maxAttendees && !isNaN(Number(maxAttendees))) {
-        eventData.maxAttendees = Number(maxAttendees);
+        eventData.maxAttendees = Number(maxAttendees)
       }
 
       if (price && !isNaN(Number(price))) {
-        eventData.price = Number(price);
-        eventData.currency = currency;
+        eventData.price = Number(price)
+        eventData.currency = currency
       }
 
       // Add location if available
@@ -274,47 +265,42 @@ const CreateEventPage = () => {
         eventData.location = {
           ...geoLocation,
           name: locationName,
-        };
+        }
       }
 
-      await createEvent(eventData);
+      await createEvent(eventData)
 
       // Show success message
-      setSnackbarSeverity('success');
-      setSnackbarMessage('Event created successfully!');
-      setSnackbarOpen(true);
+      setSnackbarSeverity("success")
+      setSnackbarMessage("Event created successfully!")
+      setSnackbarOpen(true)
 
       // Navigate to events page after a short delay
       setTimeout(() => {
-        navigate('/events');
-      }, 1500);
+        navigate("/events")
+      }, 1500)
     } catch (err: any) {
-      setError(`Failed to create event: ${err.message}`);
-      setSnackbarSeverity('error');
-      setSnackbarMessage(`Failed to create event: ${err.message}`);
-      setSnackbarOpen(true);
+      setError(`Failed to create event: ${err.message}`)
+      setSnackbarSeverity("error")
+      setSnackbarMessage(`Failed to create event: ${err.message}`)
+      setSnackbarOpen(true)
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
   const handleSnackbarClose = () => {
-    setSnackbarOpen(false);
-  };
+    setSnackbarOpen(false)
+  }
 
   // Mobile layout
   if (isMobileOrTablet) {
     return (
-      <LocalizationProvider dateAdapter={AdapterDateFns}>
+      <LocalizationProvider dateAdapter={AdapterDayjs}>
         <Box sx={{ pb: 8 }}>
           <AppBar position="sticky" color="default" elevation={0}>
             <Toolbar>
-              <IconButton
-                edge="start"
-                color="inherit"
-                onClick={() => navigate(-1)}
-                aria-label="back"
-              >
+              <IconButton edge="start" color="inherit" onClick={() => navigate(-1)} aria-label="back">
                 <ArrowBack />
               </IconButton>
               <Typography variant="h6" sx={{ flexGrow: 1 }}>
@@ -323,20 +309,10 @@ const CreateEventPage = () => {
               <Button
                 variant="contained"
                 color="primary"
-                disabled={
-                  loading ||
-                  !title.trim() ||
-                  !description.trim() ||
-                  !startDate ||
-                  !endDate
-                }
+                disabled={loading || !title.trim() || !description.trim() || !startDate || !endDate}
                 onClick={handleSubmit}
               >
-                {loading ? (
-                  <CircularProgress size={24} color="inherit" />
-                ) : (
-                  'Create'
-                )}
+                {loading ? <CircularProgress size={24} color="inherit" /> : "Create"}
               </Button>
             </Toolbar>
           </AppBar>
@@ -373,14 +349,14 @@ const CreateEventPage = () => {
                 label="Start Date & Time"
                 value={startDate}
                 onChange={(newValue) => setStartDate(newValue)}
-                slotProps={{ textField: { fullWidth: true, margin: 'normal' } }}
+                slotProps={{ textField: { fullWidth: true, margin: "normal" } }}
               />
 
               <DateTimePicker
                 label="End Date & Time"
                 value={endDate}
                 onChange={(newValue) => setEndDate(newValue)}
-                slotProps={{ textField: { fullWidth: true, margin: 'normal' } }}
+                slotProps={{ textField: { fullWidth: true, margin: "normal" } }}
               />
             </Box>
 
@@ -389,9 +365,7 @@ const CreateEventPage = () => {
               <Select
                 value={category}
                 label="Category"
-                onChange={(e) =>
-                  setCategory(e.target.value as EventCategoryType)
-                }
+                onChange={(e) => setCategory(e.target.value as EventCategoryType)}
               >
                 {eventCategories.map((cat) => (
                   <MenuItem key={cat} value={cat}>
@@ -403,12 +377,7 @@ const CreateEventPage = () => {
 
             <Box sx={{ mt: 2 }}>
               <FormControlLabel
-                control={
-                  <Switch
-                    checked={isPublic}
-                    onChange={(e) => setIsPublic(e.target.checked)}
-                  />
-                }
+                control={<Switch checked={isPublic} onChange={(e) => setIsPublic(e.target.checked)} />}
                 label="Public Event"
               />
             </Box>
@@ -478,7 +447,7 @@ const CreateEventPage = () => {
               <Typography variant="subtitle2" gutterBottom>
                 Tags
               </Typography>
-              <Box sx={{ display: 'flex', alignItems: 'center' }}>
+              <Box sx={{ display: "flex", alignItems: "center" }}>
                 <TextField
                   value={tagInput}
                   onChange={(e) => setTagInput(e.target.value)}
@@ -486,9 +455,9 @@ const CreateEventPage = () => {
                   size="small"
                   fullWidth
                   onKeyPress={(e) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault();
-                      handleAddTag();
+                    if (e.key === "Enter") {
+                      e.preventDefault()
+                      handleAddTag()
                     }
                   }}
                 />
@@ -496,41 +465,36 @@ const CreateEventPage = () => {
                   <AddIcon />
                 </IconButton>
               </Box>
-              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 1 }}>
+              <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5, mt: 1 }}>
                 {tags.map((tag) => (
-                  <Chip
-                    key={tag}
-                    label={tag}
-                    onDelete={() => handleRemoveTag(tag)}
-                    size="small"
-                  />
+                  <Chip key={tag} label={tag} onDelete={() => handleRemoveTag(tag)} size="small" />
                 ))}
               </Box>
             </Box>
 
             {/* Image preview */}
             {imagePreview && (
-              <Box sx={{ position: 'relative', mb: 2, mt: 2 }}>
+              <Box sx={{ position: "relative", mb: 2, mt: 2 }}>
                 <img
-                  src={imagePreview || '/placeholder.svg'}
+                  src={imagePreview || "/placeholder.svg"}
                   alt="Preview"
                   style={{
-                    width: '100%',
-                    maxHeight: '200px',
-                    objectFit: 'contain',
-                    borderRadius: '8px',
+                    width: "100%",
+                    maxHeight: "200px",
+                    objectFit: "contain",
+                    borderRadius: "8px",
                   }}
                 />
                 <IconButton
                   onClick={removeImage}
                   sx={{
-                    position: 'absolute',
+                    position: "absolute",
                     top: 8,
                     right: 8,
-                    bgcolor: 'rgba(0,0,0,0.5)',
-                    color: 'white',
-                    '&:hover': {
-                      bgcolor: 'rgba(0,0,0,0.7)',
+                    bgcolor: "rgba(0,0,0,0.5)",
+                    color: "white",
+                    "&:hover": {
+                      bgcolor: "rgba(0,0,0,0.7)",
                     },
                   }}
                 >
@@ -541,9 +505,9 @@ const CreateEventPage = () => {
 
             <Box
               sx={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
                 mb: 2,
                 mt: 2,
               }}
@@ -554,7 +518,7 @@ const CreateEventPage = () => {
                   id="image-upload"
                   onChange={handleImageChange}
                   accept="image/*"
-                  style={{ display: 'none' }}
+                  style={{ display: "none" }}
                 />
                 <label htmlFor="image-upload">
                   <IconButton component="span" color="primary">
@@ -563,7 +527,7 @@ const CreateEventPage = () => {
                 </label>
 
                 <IconButton
-                  color={useCurrentLocation ? 'primary' : 'default'}
+                  color={useCurrentLocation ? "primary" : "default"}
                   onClick={() => setUseCurrentLocation(!useCurrentLocation)}
                 >
                   <LocationOn />
@@ -582,24 +546,20 @@ const CreateEventPage = () => {
             open={snackbarOpen}
             autoHideDuration={4000}
             onClose={handleSnackbarClose}
-            anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+            anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
           >
-            <Alert
-              onClose={handleSnackbarClose}
-              severity={snackbarSeverity}
-              sx={{ width: '100%' }}
-            >
+            <Alert onClose={handleSnackbarClose} severity={snackbarSeverity} sx={{ width: "100%" }}>
               {snackbarMessage}
             </Alert>
           </Snackbar>
         </Box>
       </LocalizationProvider>
-    );
+    )
   }
 
   // Desktop layout
   return (
-    <LocalizationProvider dateAdapter={AdapterDateFns}>
+    <LocalizationProvider dateAdapter={AdapterDayjs}>
       <Box sx={{ p: 2 }}>
         <Typography variant="h4" gutterBottom>
           Create a New Event
@@ -607,15 +567,13 @@ const CreateEventPage = () => {
 
         <Card>
           <CardContent>
-            <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+            <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
               <Avatar
                 src={currentUser?.photoURL || undefined}
-                alt={currentUser?.displayName || 'User'}
+                alt={currentUser?.displayName || "User"}
                 sx={{ width: 50, height: 50, mr: 2 }}
               />
-              <Typography variant="h6">
-                {currentUser?.displayName || 'Anonymous'}
-              </Typography>
+              <Typography variant="h6">{currentUser?.displayName || "Anonymous"}</Typography>
             </Box>
 
             <Divider sx={{ mb: 3 }} />
@@ -675,9 +633,7 @@ const CreateEventPage = () => {
                     <Select
                       value={category}
                       label="Category"
-                      onChange={(e) =>
-                        setCategory(e.target.value as EventCategoryType)
-                      }
+                      onChange={(e) => setCategory(e.target.value as EventCategoryType)}
                     >
                       {eventCategories.map((cat) => (
                         <MenuItem key={cat} value={cat}>
@@ -689,12 +645,7 @@ const CreateEventPage = () => {
                 </Grid>
                 <Grid item xs={12} md={6}>
                   <FormControlLabel
-                    control={
-                      <Switch
-                        checked={isPublic}
-                        onChange={(e) => setIsPublic(e.target.checked)}
-                      />
-                    }
+                    control={<Switch checked={isPublic} onChange={(e) => setIsPublic(e.target.checked)} />}
                     label="Public Event"
                   />
                 </Grid>
@@ -734,12 +685,7 @@ const CreateEventPage = () => {
                   />
                 </Grid>
                 <Grid item xs={12} md={4}>
-                  <TextField
-                    label="Website"
-                    value={website}
-                    onChange={(e) => setWebsite(e.target.value)}
-                    fullWidth
-                  />
+                  <TextField label="Website" value={website} onChange={(e) => setWebsite(e.target.value)} fullWidth />
                 </Grid>
               </Grid>
 
@@ -768,7 +714,7 @@ const CreateEventPage = () => {
                 <Typography variant="subtitle2" gutterBottom>
                   Tags
                 </Typography>
-                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                <Box sx={{ display: "flex", alignItems: "center" }}>
                   <TextField
                     value={tagInput}
                     onChange={(e) => setTagInput(e.target.value)}
@@ -776,57 +722,46 @@ const CreateEventPage = () => {
                     size="small"
                     fullWidth
                     onKeyPress={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault();
-                        handleAddTag();
+                      if (e.key === "Enter") {
+                        e.preventDefault()
+                        handleAddTag()
                       }
                     }}
                   />
-                  <Button
-                    onClick={handleAddTag}
-                    disabled={!tagInput.trim()}
-                    variant="contained"
-                    sx={{ ml: 1 }}
-                  >
+                  <Button onClick={handleAddTag} disabled={!tagInput.trim()} variant="contained" sx={{ ml: 1 }}>
                     Add
                   </Button>
                 </Box>
-                <Box
-                  sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 1 }}
-                >
+                <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5, mt: 1 }}>
                   {tags.map((tag) => (
-                    <Chip
-                      key={tag}
-                      label={tag}
-                      onDelete={() => handleRemoveTag(tag)}
-                    />
+                    <Chip key={tag} label={tag} onDelete={() => handleRemoveTag(tag)} />
                   ))}
                 </Box>
               </Box>
 
               {/* Image preview */}
               {imagePreview && (
-                <Box sx={{ position: 'relative', mb: 2 }}>
+                <Box sx={{ position: "relative", mb: 2 }}>
                   <img
-                    src={imagePreview || '/placeholder.svg'}
+                    src={imagePreview || "/placeholder.svg"}
                     alt="Preview"
                     style={{
-                      width: '100%',
-                      maxHeight: '300px',
-                      objectFit: 'contain',
-                      borderRadius: '8px',
+                      width: "100%",
+                      maxHeight: "300px",
+                      objectFit: "contain",
+                      borderRadius: "8px",
                     }}
                   />
                   <IconButton
                     onClick={removeImage}
                     sx={{
-                      position: 'absolute',
+                      position: "absolute",
                       top: 8,
                       right: 8,
-                      bgcolor: 'rgba(0,0,0,0.5)',
-                      color: 'white',
-                      '&:hover': {
-                        bgcolor: 'rgba(0,0,0,0.7)',
+                      bgcolor: "rgba(0,0,0,0.5)",
+                      color: "white",
+                      "&:hover": {
+                        bgcolor: "rgba(0,0,0,0.7)",
                       },
                     }}
                   >
@@ -837,9 +772,9 @@ const CreateEventPage = () => {
 
               <Box
                 sx={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
                   mb: 2,
                 }}
               >
@@ -849,33 +784,20 @@ const CreateEventPage = () => {
                     id="image-upload"
                     onChange={handleImageChange}
                     accept="image/*"
-                    style={{ display: 'none' }}
+                    style={{ display: "none" }}
                   />
                   <label htmlFor="image-upload">
-                    <Button
-                      component="span"
-                      startIcon={<Image />}
-                      variant="outlined"
-                      size="medium"
-                    >
+                    <Button component="span" startIcon={<Image />} variant="outlined" size="medium">
                       Add Photo
                     </Button>
                   </label>
                 </Box>
 
-                <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                  <LocationOn
-                    color={useCurrentLocation ? 'primary' : 'action'}
-                    sx={{ mr: 1 }}
-                  />
+                <Box sx={{ display: "flex", alignItems: "center" }}>
+                  <LocationOn color={useCurrentLocation ? "primary" : "action"} sx={{ mr: 1 }} />
                   <FormControlLabel
                     control={
-                      <Switch
-                        checked={useCurrentLocation}
-                        onChange={(e) =>
-                          setUseCurrentLocation(e.target.checked)
-                        }
-                      />
+                      <Switch checked={useCurrentLocation} onChange={(e) => setUseCurrentLocation(e.target.checked)} />
                     }
                     label="Add Current Location"
                   />
@@ -883,21 +805,13 @@ const CreateEventPage = () => {
               </Box>
 
               {useCurrentLocation && locationName && (
-                <Typography
-                  variant="body2"
-                  color="text.secondary"
-                  sx={{ mb: 2 }}
-                >
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
                   Location: {locationName}
                 </Typography>
               )}
 
-              <Box sx={{ display: 'flex', gap: 2, mt: 3 }}>
-                <Button
-                  variant="outlined"
-                  onClick={() => navigate(-1)}
-                  sx={{ flexGrow: 1 }}
-                >
+              <Box sx={{ display: "flex", gap: 2, mt: 3 }}>
+                <Button variant="outlined" onClick={() => navigate(-1)} sx={{ flexGrow: 1 }}>
                   Cancel
                 </Button>
                 <Button
@@ -905,15 +819,9 @@ const CreateEventPage = () => {
                   variant="contained"
                   color="primary"
                   sx={{ flexGrow: 1 }}
-                  disabled={
-                    loading ||
-                    !title.trim() ||
-                    !description.trim() ||
-                    !startDate ||
-                    !endDate
-                  }
+                  disabled={loading || !title.trim() || !description.trim() || !startDate || !endDate}
                 >
-                  {loading ? <CircularProgress size={24} /> : 'Create Event'}
+                  {loading ? <CircularProgress size={24} /> : "Create Event"}
                 </Button>
               </Box>
             </form>
@@ -924,19 +832,15 @@ const CreateEventPage = () => {
           open={snackbarOpen}
           autoHideDuration={4000}
           onClose={handleSnackbarClose}
-          anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+          anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
         >
-          <Alert
-            onClose={handleSnackbarClose}
-            severity={snackbarSeverity}
-            sx={{ width: '100%' }}
-          >
+          <Alert onClose={handleSnackbarClose} severity={snackbarSeverity} sx={{ width: "100%" }}>
             {snackbarMessage}
           </Alert>
         </Snackbar>
       </Box>
     </LocalizationProvider>
-  );
-};
+  )
+}
 
-export default CreateEventPage;
+export default CreateEventPage

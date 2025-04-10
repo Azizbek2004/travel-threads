@@ -4,8 +4,17 @@ import { useMemo } from "react"
 import { Box, Typography, IconButton, Grid, Paper, useTheme } from "@mui/material"
 import { ChevronLeft, ChevronRight } from "@mui/icons-material"
 import { useNavigate } from "react-router-dom"
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay } from "date-fns"
+import dayjs from "dayjs"
+import weekday from "dayjs/plugin/weekday"
+import weekOfYear from "dayjs/plugin/weekOfYear"
+import isSameOrBefore from "dayjs/plugin/isSameOrBefore"
+import isSameOrAfter from "dayjs/plugin/isSameOrAfter"
 import type { Event } from "../../types/event"
+
+dayjs.extend(weekday)
+dayjs.extend(weekOfYear)
+dayjs.extend(isSameOrBefore)
+dayjs.extend(isSameOrAfter)
 
 interface EventCalendarProps {
   events: Event[]
@@ -21,15 +30,22 @@ const EventCalendar = ({ events, currentMonth, currentYear, onMonthChange, onYea
 
   // Get days in current month - memoized to prevent recalculation
   const calendarDays = useMemo(() => {
-    const firstDayOfMonth = startOfMonth(new Date(currentYear, currentMonth))
-    const lastDayOfMonth = endOfMonth(new Date(currentYear, currentMonth))
-    const daysInMonth = eachDayOfInterval({ start: firstDayOfMonth, end: lastDayOfMonth })
+    const firstDayOfMonth = dayjs().year(currentYear).month(currentMonth).startOf("month")
+    const lastDayOfMonth = dayjs().year(currentYear).month(currentMonth).endOf("month")
 
     // Get day of week for first day (0 = Sunday, 1 = Monday, etc.)
-    const startingDayOfWeek = firstDayOfMonth.getDay()
+    const startingDayOfWeek = firstDayOfMonth.day()
 
     // Add empty days for padding at the beginning
     const paddingDays = Array(startingDayOfWeek).fill(null)
+
+    // Create array of days in month
+    const daysInMonth = []
+    let currentDay = firstDayOfMonth
+    while (currentDay.isSameOrBefore(lastDayOfMonth, "day")) {
+      daysInMonth.push(currentDay)
+      currentDay = currentDay.add(1, "day")
+    }
 
     return [...paddingDays, ...daysInMonth]
   }, [currentMonth, currentYear])
@@ -55,23 +71,23 @@ const EventCalendar = ({ events, currentMonth, currentYear, onMonthChange, onYea
   }
 
   // Get events for a specific day
-  const getEventsForDay = (day: Date | null) => {
+  const getEventsForDay = (day: dayjs.Dayjs | null) => {
     if (!day) return []
 
     return events.filter((event) => {
-      const eventStartDate = new Date(event.startDate)
-      return isSameDay(eventStartDate, day)
+      const eventStartDate = dayjs(event.startDate)
+      return eventStartDate.format("YYYY-MM-DD") === day.format("YYYY-MM-DD")
     })
   }
 
   // Handle day click
-  const handleDayClick = (day: Date, dayEvents: Event[]) => {
+  const handleDayClick = (day: dayjs.Dayjs, dayEvents: Event[]) => {
     if (dayEvents.length === 1) {
       // If only one event, navigate directly to it
       navigate(`/event/${dayEvents[0].id}`)
     } else if (dayEvents.length > 1) {
       // If multiple events, navigate to a filtered list for that day
-      const formattedDate = format(day, "yyyy-MM-dd")
+      const formattedDate = day.format("YYYY-MM-DD")
       navigate(`/events?date=${formattedDate}`)
     }
   }
@@ -87,7 +103,7 @@ const EventCalendar = ({ events, currentMonth, currentYear, onMonthChange, onYea
           <ChevronLeft />
         </IconButton>
 
-        <Typography variant="h6">{format(new Date(currentYear, currentMonth), "MMMM yyyy")}</Typography>
+        <Typography variant="h6">{dayjs().year(currentYear).month(currentMonth).format("MMMM YYYY")}</Typography>
 
         <IconButton onClick={handleNextMonth}>
           <ChevronRight />
@@ -116,7 +132,7 @@ const EventCalendar = ({ events, currentMonth, currentYear, onMonthChange, onYea
         {/* Calendar days */}
         {calendarDays.map((day, index) => {
           const dayEvents = getEventsForDay(day)
-          const isToday = day ? isSameDay(day, new Date()) : false
+          const isToday = day ? day.format("YYYY-MM-DD") === dayjs().format("YYYY-MM-DD") : false
 
           return (
             <Grid item xs={12 / 7} key={index}>
@@ -139,7 +155,7 @@ const EventCalendar = ({ events, currentMonth, currentYear, onMonthChange, onYea
                   onClick={() => dayEvents.length > 0 && handleDayClick(day, dayEvents)}
                 >
                   <Typography align="center" sx={{ fontWeight: isToday ? "bold" : "normal" }}>
-                    {format(day, "d")}
+                    {day.format("D")}
                   </Typography>
 
                   {/* Event indicators */}
