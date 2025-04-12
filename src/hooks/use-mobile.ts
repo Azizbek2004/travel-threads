@@ -10,14 +10,13 @@ export const useMobile = () => {
       setIsMobileOrTablet(window.innerWidth <= 768)
     }
 
-    // Set initial value
     handleResize()
 
-    // Listen for window resize events
     window.addEventListener("resize", handleResize)
 
-    // Remove event listener on cleanup
-    return () => window.removeEventListener("resize", handleResize)
+    return () => {
+      window.removeEventListener("resize", handleResize)
+    }
   }, [])
 
   return { isMobileOrTablet }

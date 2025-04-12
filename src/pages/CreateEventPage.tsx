@@ -560,12 +560,12 @@ const CreateEventPage = () => {
   // Desktop layout
   return (
     <LocalizationProvider dateAdapter={AdapterDayjs}>
-      <Box sx={{ p: 2 }}>
+      <Box sx={{ p: 2, maxWidth: "1200px", mx: "auto", width: "100%" }}>
         <Typography variant="h4" gutterBottom>
           Create a New Event
         </Typography>
 
-        <Card>
+        <Card sx={{ width: "100%" }}>
           <CardContent>
             <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
               <Avatar

@@ -203,7 +203,7 @@ const EventDetailPage = () => {
 
   // Desktop layout
   return (
-    <Box sx={{ p: 2 }}>
+    <Box sx={{ p: 2, maxWidth: "1200px", mx: "auto", width: "100%" }}>
       <Button startIcon={<ArrowBack />} onClick={() => navigate(-1)} sx={{ mb: 2 }}>
         Back to Events
       </Button>

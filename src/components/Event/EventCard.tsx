@@ -249,6 +249,7 @@ const EventCard = ({ event, isDetail = false }: EventCardProps) => {
         flexDirection: "column",
         borderRadius: 2,
         overflow: "hidden",
+        boxShadow: "0px 2px 8px rgba(0, 0, 0, 0.1)",
       }}
     >
       {event.imageUrl && <CardMedia component="img" height="200" image={event.imageUrl} alt={event.title} />}

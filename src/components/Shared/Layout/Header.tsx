@@ -1,7 +1,7 @@
-'use client';
+"use client"
 
-import type React from 'react';
-import { useState } from 'react';
+import type React from "react"
+import { useState, useEffect } from "react"
 import {
   AppBar,
   Toolbar,
@@ -16,96 +16,108 @@ import {
   Box,
   InputAdornment,
   Tooltip,
-} from '@mui/material';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { useAuth } from '../../../hooks/useAuth';
-import { logOut } from '../../../services/auth';
+} from "@mui/material"
+import { Link, useNavigate, useLocation } from "react-router-dom"
+import { useAuth } from "../../../hooks/useAuth"
+import { logOut } from "../../../services/auth"
 import {
   Message,
   Notifications,
   Menu as MenuIcon,
   Add as AddIcon,
   Event as EventIcon,
-} from '@mui/icons-material';
-import { useMobile } from '../../../hooks/use-mobile';
+  Search as SearchIcon,
+} from "@mui/icons-material"
+import { useMobile } from "../../../hooks/use-mobile"
 
 const Header = () => {
-  const { currentUser } = useAuth();
-  const navigate = useNavigate();
-  const location = useLocation();
-  const [searchQuery, setSearchQuery] = useState('');
-  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
-  const [mobileMenuAnchorEl, setMobileMenuAnchorEl] =
-    useState<null | HTMLElement>(null);
-  const [createMenuAnchorEl, setCreateMenuAnchorEl] =
-    useState<null | HTMLElement>(null);
-  const isSearchPage = location.pathname.startsWith('/search');
-  const { isMobileOrTablet } = useMobile();
+  const { currentUser } = useAuth()
+  const navigate = useNavigate()
+  const location = useLocation()
+  const [searchQuery, setSearchQuery] = useState("")
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null)
+  const [mobileMenuAnchorEl, setMobileMenuAnchorEl] = useState<null | HTMLElement>(null)
+  const [createMenuAnchorEl, setCreateMenuAnchorEl] = useState<null | HTMLElement>(null)
+  const isSearchPage = location.pathname.startsWith("/search")
+  const { isMobileOrTablet } = useMobile()
+  const [isMobileView, setIsMobileView] = useState(isMobileOrTablet)
+
+  // Update mobile view state when isMobileOrTablet changes
+  useEffect(() => {
+    setIsMobileView(isMobileOrTablet)
+  }, [isMobileOrTablet])
 
   const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
+    e.preventDefault()
     if (searchQuery.trim()) {
-      navigate(`/search?query=${encodeURIComponent(searchQuery)}`);
-      setSearchQuery(''); // Clear input after search
+      navigate(`/search?query=${encodeURIComponent(searchQuery)}`)
+      setSearchQuery("") // Clear input after search
     }
-  };
+  }
 
   const handleProfileMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
-    setAnchorEl(event.currentTarget);
-  };
+    setAnchorEl(event.currentTarget)
+  }
 
   const handleMobileMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
-    setMobileMenuAnchorEl(event.currentTarget);
-  };
+    setMobileMenuAnchorEl(event.currentTarget)
+  }
 
   const handleCreateMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
-    setCreateMenuAnchorEl(event.currentTarget);
-  };
+    setCreateMenuAnchorEl(event.currentTarget)
+  }
 
   const handleMenuClose = () => {
-    setAnchorEl(null);
-    setMobileMenuAnchorEl(null);
-    setCreateMenuAnchorEl(null);
-  };
+    setAnchorEl(null)
+    setMobileMenuAnchorEl(null)
+    setCreateMenuAnchorEl(null)
+  }
 
   const handleLogout = () => {
-    logOut();
-    handleMenuClose();
-  };
+    logOut()
+    handleMenuClose()
+  }
 
   const handleCreatePost = () => {
     if (currentUser) {
-      navigate('/create-post');
+      navigate("/create-post")
     } else {
-      navigate('/login', { state: { from: '/create-post' } });
+      navigate("/login", { state: { from: "/create-post" } })
     }
-    handleMenuClose();
-  };
+    handleMenuClose()
+  }
 
   const handleCreateEvent = () => {
     if (currentUser) {
-      navigate('/create-event');
+      navigate("/create-event")
     } else {
-      navigate('/login', { state: { from: '/create-event' } });
+      navigate("/login", { state: { from: "/create-event" } })
     }
-    handleMenuClose();
-  };
+    handleMenuClose()
+  }
 
   // Mobile header is simplified
-  if (isMobileOrTablet) {
+  if (isMobileView) {
     return (
       <AppBar
         position="sticky"
         color="default"
         elevation={0}
-        sx={{ borderBottom: 1, borderColor: 'divider' }}
+        sx={{
+          borderBottom: 1,
+          borderColor: "divider",
+          width: "100%",
+          maxWidth: "100%",
+          overflow: "hidden",
+        }}
       >
         <Toolbar
           sx={{
-            justifyContent: 'space-between',
+            justifyContent: "space-between",
             height: 56,
             minHeight: 56,
             px: 2,
+            width: "100%",
           }}
         >
           {/* Logo */}
@@ -114,24 +126,19 @@ const Header = () => {
             component={Link}
             to="/"
             sx={{
-              textDecoration: 'none',
-              color: 'inherit',
-              fontWeight: 'bold',
+              textDecoration: "none",
+              color: "inherit",
+              fontWeight: "bold",
             }}
           >
             Travel Threads
           </Typography>
 
           {/* Right side actions */}
-          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+          <Box sx={{ display: "flex", alignItems: "center" }}>
             {currentUser ? (
               <>
-                <IconButton
-                  color="inherit"
-                  component={Link}
-                  to="/messages"
-                  sx={{ mr: 1 }}
-                >
+                <IconButton color="inherit" component={Link} to="/messages" sx={{ mr: 1 }}>
                   <Badge badgeContent={0} color="error">
                     <Message />
                   </Badge>
@@ -141,55 +148,42 @@ const Header = () => {
                   <MenuIcon />
                 </IconButton>
 
-                <Menu
-                  anchorEl={mobileMenuAnchorEl}
-                  open={Boolean(mobileMenuAnchorEl)}
-                  onClose={handleMenuClose}
-                >
-                  <MenuItem
-                    component={Link}
-                    to={`/profile/${currentUser.uid}`}
-                    onClick={handleMenuClose}
-                  >
+                <Menu anchorEl={mobileMenuAnchorEl} open={Boolean(mobileMenuAnchorEl)} onClose={handleMenuClose}>
+                  <MenuItem component={Link} to={`/profile/${currentUser.uid}`} onClick={handleMenuClose}>
                     Profile
                   </MenuItem>
-                  <MenuItem
-                    component={Link}
-                    to="/events"
-                    onClick={handleMenuClose}
-                  >
+                  <MenuItem component={Link} to="/events" onClick={handleMenuClose}>
                     Events
                   </MenuItem>
                   <MenuItem onClick={handleLogout}>Logout</MenuItem>
                 </Menu>
               </>
             ) : (
-              <Button
-                color="primary"
-                variant="contained"
-                size="small"
-                component={Link}
-                to="/login"
-              >
+              <Button color="primary" variant="contained" size="small" component={Link} to="/login">
                 Login
               </Button>
             )}
           </Box>
         </Toolbar>
       </AppBar>
-    );
+    )
   }
 
   // Desktop header
   return (
-    <AppBar position="static">
-      <Toolbar>
-        <Typography
-          variant="h6"
-          component={Link}
-          to="/"
-          sx={{ flexGrow: 1, textDecoration: 'none', color: 'inherit' }}
-        >
+    <AppBar
+      position="static"
+      sx={{
+        boxShadow: "0px 2px 8px rgba(0, 0, 0, 0.1)",
+        backgroundColor: "background.paper",
+        color: "text.primary",
+        width: "100%",
+        maxWidth: "100%",
+        overflow: "hidden",
+      }}
+    >
+      <Toolbar sx={{ width: "100%" }}>
+        <Typography variant="h6" component={Link} to="/" sx={{ flexGrow: 1, textDecoration: "none", color: "inherit" }}>
           Travel Threads
         </Typography>
 
@@ -202,15 +196,15 @@ const Header = () => {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               sx={{
-                backgroundColor: 'white',
+                backgroundColor: "white",
                 borderRadius: 1,
                 mr: 2,
-                width: '200px',
+                width: "200px",
               }}
               InputProps={{
                 startAdornment: (
                   <InputAdornment position="start">
-                   
+                    <SearchIcon fontSize="small" />
                   </InputAdornment>
                 ),
               }}
@@ -220,11 +214,7 @@ const Header = () => {
 
         {currentUser && (
           <Tooltip title="Create">
-            <IconButton
-              color="inherit"
-              onClick={handleCreateMenuOpen}
-              sx={{ mr: 1 }}
-            >
+            <IconButton color="inherit" onClick={handleCreateMenuOpen} sx={{ mr: 1 }}>
               <AddIcon />
             </IconButton>
           </Tooltip>
@@ -235,19 +225,16 @@ const Header = () => {
           open={Boolean(createMenuAnchorEl)}
           onClose={handleMenuClose}
           anchorOrigin={{
-            vertical: 'bottom',
-            horizontal: 'right',
+            vertical: "bottom",
+            horizontal: "right",
           }}
           transformOrigin={{
-            vertical: 'top',
-            horizontal: 'right',
+            vertical: "top",
+            horizontal: "right",
           }}
         >
           <MenuItem onClick={handleCreatePost}>
-            <span
-              className="material-icons-outlined"
-              style={{ marginRight: 8 }}
-            >
+            <span className="material-icons-outlined" style={{ marginRight: 8 }}>
               post_add
             </span>
             Create Post
@@ -276,28 +263,16 @@ const Header = () => {
               </Badge>
             </IconButton>
 
-            <IconButton
-              color="inherit"
-              onClick={handleProfileMenuOpen}
-              sx={{ ml: 1 }}
-            >
+            <IconButton color="inherit" onClick={handleProfileMenuOpen} sx={{ ml: 1 }}>
               <Avatar
                 src={currentUser.photoURL || undefined}
-                alt={currentUser.displayName || 'User'}
+                alt={currentUser.displayName || "User"}
                 sx={{ width: 32, height: 32 }}
               />
             </IconButton>
 
-            <Menu
-              anchorEl={anchorEl}
-              open={Boolean(anchorEl)}
-              onClose={handleMenuClose}
-            >
-              <MenuItem
-                component={Link}
-                to={`/profile/${currentUser.uid}`}
-                onClick={handleMenuClose}
-              >
+            <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={handleMenuClose}>
+              <MenuItem component={Link} to={`/profile/${currentUser.uid}`} onClick={handleMenuClose}>
                 Profile
               </MenuItem>
               <MenuItem onClick={handleLogout}>Logout</MenuItem>
@@ -315,7 +290,7 @@ const Header = () => {
         )}
       </Toolbar>
     </AppBar>
-  );
-};
+  )
+}
 
-export default Header;
+export default Header
