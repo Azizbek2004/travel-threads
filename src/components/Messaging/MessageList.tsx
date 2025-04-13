@@ -1,8 +1,8 @@
-"use client"
+"use client";
 
-import type React from "react"
+import type React from "react";
 
-import { useEffect, useState, useRef } from "react"
+import { useEffect, useState, useRef } from "react";
 import {
   Box,
   Typography,
@@ -14,84 +14,106 @@ import {
   MenuItem,
   ListItemIcon,
   ListItemText,
-} from "@mui/material"
-import { markMessagesAsRead, getUserProfile } from "../../services/firestore"
-import { useAuth } from "../../hooks/useAuth"
-import { onSnapshot, collection, query, where, orderBy } from "firebase/firestore"
-import { db } from "../../firebase"
-import dayjs from "dayjs"
-import { MoreVert, ContentCopy, Reply, Delete, Event } from "@mui/icons-material"
-import { useMobile } from "../../hooks/use-mobile"
-import { Link } from "react-router-dom"
+} from "@mui/material";
+import { markMessagesAsRead, getUserProfile } from "../../services/firestore";
+import { useAuth } from "../../hooks/useAuth";
+import {
+  onSnapshot,
+  collection,
+  query,
+  where,
+  orderBy,
+} from "firebase/firestore";
+import { db } from "../../firebase";
+import dayjs from "dayjs";
+import {
+  MoreVert,
+  ContentCopy,
+  Reply,
+  Delete,
+  Event,
+} from "@mui/icons-material";
+import { useMobile } from "../../hooks/use-mobile";
+import { Link } from "react-router-dom";
 
 interface Message {
-  id: string
-  conversationId: string
-  senderId: string
-  text: string
-  timestamp: string
-  read: boolean
-  mediaUrl?: string
+  id: string;
+  conversationId: string;
+  senderId: string;
+  text: string;
+  timestamp: string;
+  read: boolean;
+  mediaUrl?: string;
   sharedPost?: {
-    id: string
-    title: string
-    content: string
-    authorId: string
-  }
+    id: string;
+    title: string;
+    content: string;
+    authorId: string;
+  };
   sharedEvent?: {
-    id: string
-    title: string
-    startDate: string
+    id: string;
+    title: string;
+    startDate: string;
     location?: {
-      name: string
-    }
-  }
+      name: string;
+    };
+  };
   reactions?: {
-    [userId: string]: string
-  }
+    [userId: string]: string;
+  };
 }
 
 interface MessageListProps {
-  conversationId: string
-  otherUserId: string
-  onReply?: (text: string) => void
+  conversationId: string;
+  otherUserId: string;
+  onReply?: (text: string) => void;
 }
 
-const MessageList = ({ conversationId, otherUserId, onReply }: MessageListProps) => {
-  const { currentUser } = useAuth()
-  const [messages, setMessages] = useState<Message[]>([])
-  const [loading, setLoading] = useState(true)
-  const [otherUser, setOtherUser] = useState<any>(null)
-  const messagesEndRef = useRef<HTMLDivElement>(null)
-  const [menuAnchorEl, setMenuAnchorEl] = useState<null | HTMLElement>(null)
-  const [selectedMessage, setSelectedMessage] = useState<Message | null>(null)
-  const { isMobileOrTablet } = useMobile()
+const MessageList = ({
+  conversationId,
+  otherUserId,
+  onReply,
+}: MessageListProps) => {
+  const { currentUser } = useAuth();
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [otherUser, setOtherUser] = useState<any>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [menuAnchorEl, setMenuAnchorEl] = useState<null | HTMLElement>(null);
+  const [selectedMessage, setSelectedMessage] = useState<Message | null>(null);
+  const { isMobileOrTablet } = useMobile();
+  const unsubscribeRef = useRef<() => void | null>();
 
   // Fetch other user's profile
   useEffect(() => {
     const fetchOtherUser = async () => {
       try {
-        const profile = await getUserProfile(otherUserId)
-        setOtherUser(profile)
+        const profile = await getUserProfile(otherUserId);
+        setOtherUser(profile);
       } catch (error) {
-        console.error("Error fetching user profile:", error)
+        console.error("Error fetching user profile:", error);
       }
-    }
+    };
 
-    fetchOtherUser()
-  }, [otherUserId])
+    fetchOtherUser();
+  }, [otherUserId]);
 
   // Set up real-time listener for messages
   useEffect(() => {
-    if (!conversationId || !currentUser) return
+    if (!conversationId || !currentUser) return;
 
-    setLoading(true)
+    setLoading(true);
+
+    // Clean up previous listener if it exists
+    if (unsubscribeRef.current) {
+      unsubscribeRef.current();
+    }
 
     const messagesQuery = query(
       collection(db, "messages"),
       where("conversationId", "==", conversationId),
-      orderBy("timestamp", "asc"),
-    )
+      orderBy("timestamp", "asc")
+    );
 
     const unsubscribe = onSnapshot(
       messagesQuery,
@@ -99,82 +121,112 @@ const MessageList = ({ conversationId, otherUserId, onReply }: MessageListProps)
         const messagesData = snapshot.docs.map((doc) => ({
           id: doc.id,
           ...doc.data(),
-        })) as Message[]
+        })) as Message[];
 
-        setMessages(messagesData)
-        setLoading(false)
+        setMessages(messagesData);
+        setLoading(false);
 
         // Mark messages as read if there are unread messages from the other user
-        const unreadMessages = messagesData.filter((msg) => msg.senderId !== currentUser.uid && !msg.read)
+        const unreadMessages = messagesData.filter(
+          (msg) => msg.senderId !== currentUser.uid && !msg.read
+        );
 
         if (unreadMessages.length > 0) {
           markMessagesAsRead(conversationId, currentUser.uid).catch((error) =>
-            console.error("Error marking messages as read:", error),
-          )
+            console.error("Error marking messages as read:", error)
+          );
         }
       },
       (error) => {
-        console.error("Error fetching messages:", error)
-        setLoading(false)
-      },
-    )
+        console.error("Error fetching messages:", error);
+        setLoading(false);
+      }
+    );
 
-    return () => unsubscribe()
-  }, [conversationId, currentUser])
+    // Store the unsubscribe function
+    unsubscribeRef.current = unsubscribe;
+
+    return () => {
+      unsubscribe();
+      unsubscribeRef.current = undefined;
+    };
+  }, [conversationId, currentUser]);
 
   // Scroll to bottom when messages change
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
-  }, [messages])
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
 
-  const handleMenuOpen = (event: React.MouseEvent<HTMLElement>, message: Message) => {
-    setMenuAnchorEl(event.currentTarget)
-    setSelectedMessage(message)
-  }
+  const handleMenuOpen = (
+    event: React.MouseEvent<HTMLElement>,
+    message: Message
+  ) => {
+    setMenuAnchorEl(event.currentTarget);
+    setSelectedMessage(message);
+  };
 
   const handleMenuClose = () => {
-    setMenuAnchorEl(null)
-    setSelectedMessage(null)
-  }
+    setMenuAnchorEl(null);
+    setSelectedMessage(null);
+  };
 
   const handleCopyMessage = () => {
     if (selectedMessage) {
-      navigator.clipboard.writeText(selectedMessage.text)
+      navigator.clipboard.writeText(selectedMessage.text);
     }
-    handleMenuClose()
-  }
+    handleMenuClose();
+  };
 
   const handleReplyToMessage = () => {
     if (selectedMessage && onReply) {
-      onReply(selectedMessage.text)
+      onReply(selectedMessage.text);
     }
-    handleMenuClose()
-  }
+    handleMenuClose();
+  };
 
   // Group messages by date
-  const groupedMessages = messages.reduce((groups: Record<string, Message[]>, message: Message) => {
-    const date = dayjs(message.timestamp).format("YYYY-MM-DD")
-    if (!groups[date]) {
-      groups[date] = []
-    }
-    groups[date].push(message)
-    return groups
-  }, {})
+  const groupedMessages = messages.reduce(
+    (groups: Record<string, Message[]>, message: Message) => {
+      const date = dayjs(message.timestamp).format("YYYY-MM-DD");
+      if (!groups[date]) {
+        groups[date] = [];
+      }
+      groups[date].push(message);
+      return groups;
+    },
+    {}
+  );
 
   if (loading) {
     return (
-      <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", height: "300px" }}>
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          height: "300px",
+        }}
+      >
         <CircularProgress />
       </Box>
-    )
+    );
   }
 
   if (messages.length === 0) {
     return (
-      <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", height: "300px" }}>
-        <Typography color="text.secondary">No messages yet. Start the conversation!</Typography>
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          height: "300px",
+        }}
+      >
+        <Typography color="text.secondary">
+          No messages yet. Start the conversation!
+        </Typography>
       </Box>
-    )
+    );
   }
 
   return (
@@ -212,7 +264,7 @@ const MessageList = ({ conversationId, otherUserId, onReply }: MessageListProps)
           </Box>
 
           {msgs.map((message) => {
-            const isCurrentUser = message.senderId === currentUser?.uid
+            const isCurrentUser = message.senderId === currentUser?.uid;
 
             return (
               <Box
@@ -239,8 +291,12 @@ const MessageList = ({ conversationId, otherUserId, onReply }: MessageListProps)
                     sx={{
                       p: 1.5,
                       borderRadius: 2,
-                      bgcolor: isCurrentUser ? "primary.main" : "background.paper",
-                      color: isCurrentUser ? "primary.contrastText" : "text.primary",
+                      bgcolor: isCurrentUser
+                        ? "primary.main"
+                        : "background.paper",
+                      color: isCurrentUser
+                        ? "primary.contrastText"
+                        : "text.primary",
                       position: "relative",
                     }}
                   >
@@ -284,14 +340,19 @@ const MessageList = ({ conversationId, otherUserId, onReply }: MessageListProps)
                         to={`/event/${message.sharedEvent.id}`}
                       >
                         <Box sx={{ display: "flex", alignItems: "center" }}>
-                          <Event fontSize="small" sx={{ mr: 1, color: "primary.main" }} />
+                          <Event
+                            fontSize="small"
+                            sx={{ mr: 1, color: "primary.main" }}
+                          />
                           <Typography variant="subtitle2" color="primary">
                             {message.sharedEvent.title}
                           </Typography>
                         </Box>
                         {message.sharedEvent.startDate && (
                           <Typography variant="caption" display="block">
-                            {new Date(message.sharedEvent.startDate).toLocaleDateString()}
+                            {new Date(
+                              message.sharedEvent.startDate
+                            ).toLocaleDateString()}
                           </Typography>
                         )}
                         {message.sharedEvent.location?.name && (
@@ -313,7 +374,9 @@ const MessageList = ({ conversationId, otherUserId, onReply }: MessageListProps)
                             borderRadius: "8px",
                             cursor: "pointer",
                           }}
-                          onClick={() => window.open(message.mediaUrl, "_blank")}
+                          onClick={() =>
+                            window.open(message.mediaUrl, "_blank")
+                          }
                         />
                       </Box>
                     )}
@@ -365,14 +428,18 @@ const MessageList = ({ conversationId, otherUserId, onReply }: MessageListProps)
                   </Avatar>
                 )}
               </Box>
-            )
+            );
           })}
         </Box>
       ))}
 
       <div ref={messagesEndRef} />
 
-      <Menu anchorEl={menuAnchorEl} open={Boolean(menuAnchorEl)} onClose={handleMenuClose}>
+      <Menu
+        anchorEl={menuAnchorEl}
+        open={Boolean(menuAnchorEl)}
+        onClose={handleMenuClose}
+      >
         <MenuItem onClick={handleCopyMessage}>
           <ListItemIcon>
             <ContentCopy fontSize="small" />
@@ -395,7 +462,7 @@ const MessageList = ({ conversationId, otherUserId, onReply }: MessageListProps)
         )}
       </Menu>
     </Box>
-  )
-}
+  );
+};
 
-export default MessageList
+export default MessageList;

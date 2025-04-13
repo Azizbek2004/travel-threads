@@ -1,8 +1,8 @@
-"use client"
+"use client";
 
-import type React from "react"
+import type React from "react";
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useRef } from "react";
 import {
   Box,
   Typography,
@@ -21,12 +21,16 @@ import {
   MenuItem,
   Collapse,
   Avatar,
-} from "@mui/material"
-import InfiniteScroll from "react-infinite-scroll-component"
-import Post from "../components/Post/Post"
-import { getPosts, getFollowingPosts, getUserProfile } from "../services/firestore"
-import { useAuth } from "../hooks/useAuth"
-import debounce from "lodash.debounce"
+} from "@mui/material";
+import InfiniteScroll from "react-infinite-scroll-component";
+import Post from "../components/Post/Post";
+import {
+  getPosts,
+  getFollowingPosts,
+  getUserProfile,
+} from "../services/firestore";
+import { useAuth } from "../hooks/useAuth";
+import debounce from "lodash.debounce";
 import {
   Search as SearchIcon,
   FilterList,
@@ -35,248 +39,312 @@ import {
   TrendingUp,
   KeyboardArrowDown,
   FlightTakeoff,
-} from "@mui/icons-material"
-import { useNavigate } from "react-router-dom"
-import { useMobile } from "../hooks/use-mobile"
+} from "@mui/icons-material";
+import { useNavigate } from "react-router-dom";
+import { useMobile } from "../hooks/use-mobile";
 
 const Home = () => {
-  const { currentUser } = useAuth()
-  const navigate = useNavigate()
-  const { isMobileOrTablet } = useMobile()
-  const [posts, setPosts] = useState<any[]>([])
-  const [filteredPosts, setFilteredPosts] = useState<any[]>([])
-  const [searchQuery, setSearchQuery] = useState("")
-  const [page, setPage] = useState(0)
-  const [hasMore, setHasMore] = useState(true)
-  const [loading, setLoading] = useState(false)
-  const [tabValue, setTabValue] = useState(0) // 0 for "For You", 1 for "Following"
-  const [sortAnchorEl, setSortAnchorEl] = useState<null | HTMLElement>(null)
-  const [sortMethod, setSortMethod] = useState<"recent" | "popular" | "trending">("recent")
-  const [showLocationFilter, setShowLocationFilter] = useState(false)
-  const [locationFilter, setLocationFilter] = useState<string | null>(null)
-  const [showAdvancedSearch, setShowAdvancedSearch] = useState(false)
-  const [suggestedUsers, setSuggestedUsers] = useState<any[]>([])
+  const { currentUser } = useAuth();
+  const navigate = useNavigate();
+  const { isMobileOrTablet } = useMobile();
+  const [posts, setPosts] = useState<any[]>([]);
+  const [filteredPosts, setFilteredPosts] = useState<any[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [page, setPage] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [tabValue, setTabValue] = useState(0); // 0 for "For You", 1 for "Following"
+  const [sortAnchorEl, setSortAnchorEl] = useState<null | HTMLElement>(null);
+  const [sortMethod, setSortMethod] = useState<
+    "recent" | "popular" | "trending"
+  >("recent");
+  // const [showLocationFilter, setShowLocationFilter] = useState(false)
+  const [locationFilter, setLocationFilter] = useState<string | null>(null);
+  const [showAdvancedSearch, setShowAdvancedSearch] = useState(false);
+  const [suggestedUsers, setSuggestedUsers] = useState<any[]>([]);
+  const isInitialMount = useRef(true);
+  const fetchingRef = useRef(false);
 
-  const PAGE_SIZE = 10 // Number of posts to load per page
+  const PAGE_SIZE = 10; // Number of posts to load per page
 
   const fetchPosts = async (pageNum: number) => {
-    setLoading(true)
+    // Prevent duplicate fetches
+    if (fetchingRef.current) return;
+    fetchingRef.current = true;
+
+    setLoading(true);
     try {
-      const allPosts = await getPosts()
+      const allPosts = await getPosts();
 
       // Apply sorting
-      const sortedPosts = [...allPosts]
+      const sortedPosts = [...allPosts];
       if (sortMethod === "popular") {
-        sortedPosts.sort((a, b) => (b.likes || 0) - (a.likes || 0))
+        sortedPosts.sort((a, b) => (b.likes || 0) - (a.likes || 0));
       } else if (sortMethod === "trending") {
         // Trending is a combination of recent + engagement (likes, comments, shares)
         sortedPosts.sort((a, b) => {
-          const aEngagement = (a.likes || 0) + (a.commentCount || 0) + (a.shareCount || 0)
-          const bEngagement = (b.likes || 0) + (b.commentCount || 0) + (b.shareCount || 0)
+          const aEngagement =
+            (a.likes || 0) + (a.commentCount || 0) + (a.shareCount || 0);
+          const bEngagement =
+            (b.likes || 0) + (b.commentCount || 0) + (a.shareCount || 0);
 
           // Calculate engagement rate (weighted by recency)
-          const aDate = new Date(a.createdAt)
-          const bDate = new Date(b.createdAt)
-          const aAge = Date.now() - aDate.getTime()
-          const bAge = Date.now() - bDate.getTime()
+          const aDate = new Date(a.createdAt);
+          const bDate = new Date(b.createdAt);
+          const aAge = Date.now() - aDate.getTime();
+          const bAge = Date.now() - bDate.getTime();
 
-          const aTrending = aEngagement / Math.sqrt(aAge)
-          const bTrending = bEngagement / Math.sqrt(bAge)
+          const aTrending = aEngagement / Math.sqrt(aAge);
+          const bTrending = bEngagement / Math.sqrt(bAge);
 
-          return bTrending - aTrending
-        })
+          return bTrending - aTrending;
+        });
       }
       // recent sorting is default (by createdAt desc)
 
-      const start = pageNum * PAGE_SIZE
-      const end = start + PAGE_SIZE
-      const paginatedPosts = sortedPosts.slice(start, end)
-      setPosts((prev) => [...prev, ...paginatedPosts])
-      setFilteredPosts((prev) => [...prev, ...paginatedPosts])
-      setHasMore(paginatedPosts.length === PAGE_SIZE)
-    } catch (error) {
-      console.error("Error fetching posts:", error)
-    } finally {
-      setLoading(false)
-    }
-  }
+      const start = pageNum * PAGE_SIZE;
+      const end = start + PAGE_SIZE;
+      const paginatedPosts = sortedPosts.slice(start, end);
 
-  const fetchFollowingPosts = async () => {
-    if (!currentUser) return
+      // Create a map of existing post IDs to avoid duplicates
+      const existingPostIds = new Set(posts.map((post) => post.id));
+      const uniquePosts = paginatedPosts.filter(
+        (post) => !existingPostIds.has(post.id)
+      );
 
-    setLoading(true)
-    try {
-      const followingPosts = await getFollowingPosts(currentUser.uid)
-
-      // Apply same sorting logic as regular posts
-      const sortedPosts = [...followingPosts]
-      if (sortMethod === "popular") {
-        sortedPosts.sort((a, b) => (b.likes || 0) - (a.likes || 0))
-      } else if (sortMethod === "trending") {
-        sortedPosts.sort((a, b) => {
-          const aEngagement = (a.likes || 0) + (a.commentCount || 0) + (a.shareCount || 0)
-          const bEngagement = (b.likes || 0) + (b.commentCount || 0) + (b.shareCount || 0)
-
-          const aDate = new Date(a.createdAt)
-          const bDate = new Date(b.createdAt)
-          const aAge = Date.now() - aDate.getTime()
-          const bAge = Date.now() - bDate.getTime()
-
-          const aTrending = aEngagement / Math.sqrt(aAge)
-          const bTrending = bEngagement / Math.sqrt(bAge)
-
-          return bTrending - aTrending
-        })
+      if (pageNum === 0) {
+        // First page, replace all posts
+        setPosts(paginatedPosts);
+        setFilteredPosts(paginatedPosts);
+      } else {
+        // Subsequent pages, append unique posts
+        setPosts((prev) => [...prev, ...uniquePosts]);
+        setFilteredPosts((prev) => [...prev, ...uniquePosts]);
       }
 
-      setPosts(sortedPosts)
-      setFilteredPosts(sortedPosts)
-      setHasMore(false) // For simplicity, we're not paginating following posts
+      setHasMore(paginatedPosts.length === PAGE_SIZE);
     } catch (error) {
-      console.error("Error fetching following posts:", error)
+      console.error("Error fetching posts:", error);
     } finally {
-      setLoading(false)
+      setLoading(false);
+      fetchingRef.current = false;
     }
-  }
+  };
+
+  const fetchFollowingPosts = async () => {
+    if (!currentUser) return;
+
+    // Prevent duplicate fetches
+    if (fetchingRef.current) return;
+    fetchingRef.current = true;
+
+    setLoading(true);
+    try {
+      const followingPosts = await getFollowingPosts(currentUser.uid);
+
+      // Apply same sorting logic as regular posts
+      const sortedPosts = [...followingPosts];
+      if (sortMethod === "popular") {
+        sortedPosts.sort((a, b) => (b.likes || 0) - (a.likes || 0));
+      } else if (sortMethod === "trending") {
+        sortedPosts.sort((a, b) => {
+          const aEngagement =
+            (a.likes || 0) + (a.commentCount || 0) + (a.shareCount || 0);
+          const bEngagement =
+            (b.likes || 0) + (b.commentCount || 0) + (b.shareCount || 0);
+
+          const aDate = new Date(a.createdAt);
+          const bDate = new Date(b.createdAt);
+          const aAge = Date.now() - aDate.getTime();
+          const bAge = Date.now() - bDate.getTime();
+
+          const aTrending = aEngagement / Math.sqrt(aAge);
+          const bTrending = bEngagement / Math.sqrt(bAge);
+
+          return bTrending - aTrending;
+        });
+      }
+
+      setPosts(sortedPosts);
+      setFilteredPosts(sortedPosts);
+      setHasMore(false); // For simplicity, we're not paginating following posts
+    } catch (error) {
+      console.error("Error fetching following posts:", error);
+    } finally {
+      setLoading(false);
+      fetchingRef.current = false;
+    }
+  };
 
   // Fetch suggested users
   const fetchSuggestedUsers = async () => {
-    if (!currentUser) return
+    if (!currentUser) return;
 
     try {
       // In a real app, you'd have a proper algorithm for suggestions
       // For now, we'll just get some random users
-      const allPosts = await getPosts()
+      const allPosts = await getPosts();
       const userIds = [...new Set(allPosts.map((post) => post.authorId))]
         .filter((id) => id !== currentUser.uid)
-        .slice(0, 5)
+        .slice(0, 5);
 
-      const users = []
+      const users = [];
       for (const userId of userIds) {
-        const user = await getUserProfile(userId)
-        if (user) users.push(user)
+        const user = await getUserProfile(userId);
+        if (user) users.push(user);
       }
 
-      setSuggestedUsers(users)
+      setSuggestedUsers(users);
     } catch (error) {
-      console.error("Error fetching suggested users:", error)
+      console.error("Error fetching suggested users:", error);
     }
-  }
+  };
 
   const loadMorePosts = () => {
-    if (hasMore && tabValue === 0) {
-      setPage((prev) => prev + 1)
-      fetchPosts(page + 1)
+    if (hasMore && tabValue === 0 && !fetchingRef.current) {
+      setPage((prev) => prev + 1);
+      fetchPosts(page + 1);
     }
-  }
+  };
 
   const handleSearch = (query: string) => {
     if (!query.trim()) {
-      setFilteredPosts(posts)
-      return
+      setFilteredPosts(posts);
+      return;
     }
 
-    const lowerQuery = query.toLowerCase()
+    const lowerQuery = query.toLowerCase();
 
     const filtered = posts.filter((post) => {
       // Text search
       const textMatch =
-        post.title?.toLowerCase().includes(lowerQuery) || post.content?.toLowerCase().includes(lowerQuery)
+        post.title?.toLowerCase().includes(lowerQuery) ||
+        post.content?.toLowerCase().includes(lowerQuery);
 
       // Location filter (if active)
       const locationMatch = locationFilter
-        ? post.location?.name?.toLowerCase().includes(locationFilter.toLowerCase())
-        : true
+        ? post.location?.name
+            ?.toLowerCase()
+            .includes(locationFilter.toLowerCase())
+        : true;
 
-      return textMatch && locationMatch
-    })
+      return textMatch && locationMatch;
+    });
 
-    setFilteredPosts(filtered)
-  }
+    setFilteredPosts(filtered);
+  };
 
   const handleLocationFilter = (query: string) => {
-    setLocationFilter(query || null)
+    setLocationFilter(query || null);
 
     if (!query) {
-      setFilteredPosts(posts)
-      return
+      setFilteredPosts(posts);
+      return;
     }
 
-    const lowerQuery = query.toLowerCase()
-    const filtered = posts.filter((post) => post.location?.name?.toLowerCase().includes(lowerQuery))
+    const lowerQuery = query.toLowerCase();
+    const filtered = posts.filter((post) =>
+      post.location?.name?.toLowerCase().includes(lowerQuery)
+    );
 
-    setFilteredPosts(filtered)
-  }
+    setFilteredPosts(filtered);
+  };
 
   // Debounced search function
   const debouncedSearch = useCallback(
     debounce((query: string) => {
-      handleSearch(query)
+      handleSearch(query);
     }, 500),
-    [posts, locationFilter],
-  )
+    [posts, locationFilter]
+  );
 
   useEffect(() => {
-    debouncedSearch(searchQuery)
-  }, [searchQuery, debouncedSearch])
+    debouncedSearch(searchQuery);
+  }, [searchQuery, debouncedSearch]);
 
   // Reset state and fetch posts when tab or sort method changes
   useEffect(() => {
-    setPosts([])
-    setFilteredPosts([])
-    setPage(0)
-    setSearchQuery("")
-    setLocationFilter(null)
+    // Only run this effect after the initial mount
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
+    }
+
+    setPosts([]);
+    setFilteredPosts([]);
+    setPage(0);
+    setSearchQuery("");
+    setLocationFilter(null);
 
     if (tabValue === 0) {
-      fetchPosts(0) // For You tab
+      fetchPosts(0); // For You tab
     } else {
-      fetchFollowingPosts() // Following tab
+      fetchFollowingPosts(); // Following tab
+    }
+  }, [tabValue, sortMethod]);
+
+  // Initial data fetch
+  useEffect(() => {
+    if (tabValue === 0) {
+      fetchPosts(0);
+    } else {
+      fetchFollowingPosts();
     }
 
     // Fetch suggested users
     if (currentUser && isMobileOrTablet) {
-      fetchSuggestedUsers()
+      fetchSuggestedUsers();
     }
-  }, [tabValue, sortMethod, currentUser])
+  }, [currentUser, isMobileOrTablet]);
 
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
-    setTabValue(newValue)
-  }
+    setTabValue(newValue);
+  };
 
-  const handleSortMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
-    setSortAnchorEl(event.currentTarget)
-  }
+  const handleSortMenuOpen = (e: React.MouseEvent<HTMLElement>) => {
+    setSortAnchorEl(e.currentTarget);
+  };
 
   const handleSortMenuClose = () => {
-    setSortAnchorEl(null)
-  }
+    setSortAnchorEl(null);
+  };
 
   const handleSortSelect = (sort: "recent" | "popular" | "trending") => {
-    setSortMethod(sort)
-    handleSortMenuClose()
-  }
+    setSortMethod(sort);
+    handleSortMenuClose();
+  };
 
   const handleAdvancedSearch = () => {
-    const searchParams = new URLSearchParams()
-    if (searchQuery) searchParams.set("query", searchQuery)
-    if (locationFilter) searchParams.set("location", locationFilter)
+    const searchParams = new URLSearchParams();
+    if (searchQuery) searchParams.set("query", searchQuery);
+    if (locationFilter) searchParams.set("location", locationFilter);
 
-    navigate(`/search?${searchParams.toString()}`)
-  }
+    navigate(`/search?${searchParams.toString()}`);
+  };
 
   return (
-    <Box sx={{ p: isMobileOrTablet ? 0 : 2, width: "100%", maxWidth: "100vw", overflow: "hidden" }}>
+    <Box
+      sx={{
+        p: isMobileOrTablet ? 0 : 2,
+        width: "100%",
+        maxWidth: "100vw",
+        overflow: "hidden",
+      }}
+    >
       {!isMobileOrTablet && (
         <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
-         <img src="/logo.svg" alt="" height="36px" style={{ marginRight: '12px' }} />
+          <FlightTakeoff
+            sx={{ mr: 1, color: "primary.main", fontSize: "2rem" }}
+          />
           <Typography variant="h4">Beyond Borders</Typography>
         </Box>
       )}
 
       {/* Mobile Stories/Suggested Users Row */}
       {isMobileOrTablet && suggestedUsers.length > 0 && (
-        <Box sx={{ overflowX: "auto", whiteSpace: "nowrap", py: 1, px: 2, mb: 1 }}>
+        <Box
+          sx={{ overflowX: "auto", whiteSpace: "nowrap", py: 1, px: 2, mb: 1 }}
+        >
           {suggestedUsers.map((user) => (
             <Box
               key={user.id}
@@ -300,7 +368,12 @@ const Home = () => {
                   borderColor: "primary.main",
                 }}
               />
-              <Typography variant="caption" display="block" noWrap sx={{ maxWidth: 64 }}>
+              <Typography
+                variant="caption"
+                display="block"
+                noWrap
+                sx={{ maxWidth: 64 }}
+              >
                 {user.displayName}
               </Typography>
             </Box>
@@ -343,10 +416,18 @@ const Home = () => {
                 endIcon={<KeyboardArrowDown />}
                 sx={{ ml: 1, minWidth: 100 }}
               >
-                {sortMethod === "recent" ? "Recent" : sortMethod === "popular" ? "Popular" : "Trending"}
+                {sortMethod === "recent"
+                  ? "Recent"
+                  : sortMethod === "popular"
+                  ? "Popular"
+                  : "Trending"}
               </Button>
 
-              <Menu anchorEl={sortAnchorEl} open={Boolean(sortAnchorEl)} onClose={handleSortMenuClose}>
+              <Menu
+                anchorEl={sortAnchorEl}
+                open={Boolean(sortAnchorEl)}
+                onClose={handleSortMenuClose}
+              >
                 <MenuItem onClick={() => handleSortSelect("recent")}>
                   <KeyboardArrowDown sx={{ mr: 1 }} />
                   Recent
@@ -387,7 +468,12 @@ const Home = () => {
                   sx={{ mb: 2 }}
                 />
 
-                <Button variant="contained" size="small" onClick={handleAdvancedSearch} fullWidth>
+                <Button
+                  variant="contained"
+                  size="small"
+                  onClick={handleAdvancedSearch}
+                  fullWidth
+                >
                   Advanced Search
                 </Button>
               </Box>
@@ -397,7 +483,11 @@ const Home = () => {
             {(searchQuery || locationFilter) && (
               <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
                 {searchQuery && (
-                  <Chip label={`Search: ${searchQuery}`} onDelete={() => setSearchQuery("")} size="small" />
+                  <Chip
+                    label={`Search: ${searchQuery}`}
+                    onDelete={() => setSearchQuery("")}
+                    size="small"
+                  />
                 )}
                 {locationFilter && (
                   <Chip
@@ -446,7 +536,11 @@ const Home = () => {
           }}
         >
           <Typography variant="body2" color="text.secondary">
-            {sortMethod === "recent" ? "Most Recent" : sortMethod === "popular" ? "Most Popular" : "Trending"}
+            {sortMethod === "recent"
+              ? "Most Recent"
+              : sortMethod === "popular"
+              ? "Most Popular"
+              : "Trending"}
           </Typography>
 
           <Button
@@ -464,7 +558,14 @@ const Home = () => {
       {/* Feed Content */}
       <Box sx={{ width: "100%", maxWidth: "100%", overflow: "hidden" }}>
         {loading && posts.length === 0 ? (
-          <Box sx={{ display: "flex", justifyContent: "center", my: 4, width: "100%" }}>
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "center",
+              my: 4,
+              width: "100%",
+            }}
+          >
             <CircularProgress />
           </Box>
         ) : filteredPosts.length === 0 ? (
@@ -474,28 +575,38 @@ const Home = () => {
                 ? "No matching posts found in your following feed"
                 : "Follow users to see their posts here!"
               : searchQuery || locationFilter
-                ? "No matching posts found"
-                : "No posts found"}
+              ? "No matching posts found"
+              : "No posts found"}
           </Typography>
         ) : (
           <InfiniteScroll
             dataLength={filteredPosts.length}
             next={loadMorePosts}
             hasMore={hasMore && !searchQuery && !locationFilter}
-            loader={<CircularProgress sx={{ display: "block", mx: "auto", my: 2 }} />}
+            loader={
+              <CircularProgress sx={{ display: "block", mx: "auto", my: 2 }} />
+            }
             endMessage={
-              <Typography sx={{ textAlign: "center", mt: 2, mb: isMobileOrTablet ? 8 : 2 }}>No more posts</Typography>
+              <Typography
+                sx={{
+                  textAlign: "center",
+                  mt: 2,
+                  mb: isMobileOrTablet ? 8 : 2,
+                }}
+              >
+                No more posts
+              </Typography>
             }
             style={{ width: "100%", overflow: "visible" }}
           >
-            {filteredPosts.map((post) => (
-              <Post key={post.id} post={post} />
+            {filteredPosts.map((post, index) => (
+              <Post key={`${post.id}-${index}`} post={post} />
             ))}
           </InfiniteScroll>
         )}
       </Box>
     </Box>
-  )
-}
+  );
+};
 
-export default Home
+export default Home;

@@ -1,9 +1,9 @@
-"use client"
+"use client";
 
-import type React from "react"
+import type React from "react";
 
-import { useState, useEffect } from "react"
-import { useParams, Link } from "react-router-dom"
+import { useState, useEffect } from "react";
+import { useParams, Link } from "react-router-dom";
 import {
   Box,
   Typography,
@@ -18,63 +18,124 @@ import {
   ListItem,
   ListItemAvatar,
   ListItemText,
-} from "@mui/material"
-import { useAuth } from "../hooks/useAuth"
-import { getUserProfile, getUserPosts, getFollowers, getFollowing } from "../services/firestore"
-import Post from "../components/Post/Post"
-import { EditProfile, ProfileInfo } from "../components/Profile"
-import { useMobile } from "../hooks/use-mobile"
-import { Settings, LocationOn } from "@mui/icons-material"
+  CircularProgress,
+} from "@mui/material";
+import { useAuth } from "../hooks/useAuth";
+import {
+  getUserProfile,
+  getUserPosts,
+  getFollowers,
+  getFollowing,
+  followUser,
+  unfollowUser,
+} from "../services/firestore";
+import Post from "../components/Post/Post";
+import { EditProfile, ProfileInfo } from "../components/Profile";
+import { useMobile } from "../hooks/use-mobile";
+import { Settings, LocationOn } from "@mui/icons-material";
 
 const ProfilePage = () => {
-  const { userId } = useParams<{ userId: string }>()
-  const { currentUser } = useAuth()
-  const { isMobileOrTablet } = useMobile()
-  const [profile, setProfile] = useState<any>(null)
-  const [posts, setPosts] = useState<any[]>([])
-  const [followers, setFollowers] = useState<any[]>([])
-  const [following, setFollowing] = useState<any[]>([])
-  const [isEditing, setIsEditing] = useState(false)
-  const [tabValue, setTabValue] = useState(0) // 0 for Posts, 1 for Followers, 2 for Following
+  const { userId } = useParams<{ userId: string }>();
+  const { currentUser } = useAuth();
+  const { isMobileOrTablet } = useMobile();
+  const [profile, setProfile] = useState<any>(null);
+  const [posts, setPosts] = useState<any[]>([]);
+  const [followers, setFollowers] = useState<any[]>([]);
+  const [following, setFollowing] = useState<any[]>([]);
+  const [isEditing, setIsEditing] = useState(false);
+  const [tabValue, setTabValue] = useState(0); // 0 for Posts, 1 for Followers, 2 for Following
+  const [isFollowing, setIsFollowing] = useState(false);
+  const [followerCount, setFollowerCount] = useState(0);
+  const [isLoading, setIsLoading] = useState(false);
+  const [profileLoading, setProfileLoading] = useState(true);
 
   useEffect(() => {
     const fetchData = async () => {
-      if (!userId) return
+      if (!userId) return;
 
-      const userProfile = await getUserProfile(userId)
-      setProfile(userProfile)
+      setProfileLoading(true);
+      try {
+        const userProfile = await getUserProfile(userId);
+        setProfile(userProfile);
 
-      // Fetch posts for the initial tab
-      const userPosts = await getUserPosts(userId)
-      setPosts(userPosts)
-    }
-    fetchData()
-  }, [userId])
+        // Check if current user is following this profile
+        if (currentUser && userProfile?.followers) {
+          setIsFollowing(userProfile.followers.includes(currentUser.uid));
+          setFollowerCount(userProfile.followers.length || 0);
+        }
+
+        // Fetch posts for the initial tab
+        const userPosts = await getUserPosts(userId);
+        setPosts(userPosts);
+      } catch (error) {
+        console.error("Error fetching profile data:", error);
+      } finally {
+        setProfileLoading(false);
+      }
+    };
+    fetchData();
+  }, [userId, currentUser]);
 
   useEffect(() => {
     const fetchTabData = async () => {
-      if (!userId) return
+      if (!userId) return;
 
       if (tabValue === 0) {
-        const userPosts = await getUserPosts(userId)
-        setPosts(userPosts)
+        const userPosts = await getUserPosts(userId);
+        setPosts(userPosts);
       } else if (tabValue === 1) {
-        const userFollowers = await getFollowers(userId)
-        setFollowers(userFollowers)
+        const userFollowers = await getFollowers(userId);
+        setFollowers(userFollowers);
       } else if (tabValue === 2) {
-        const userFollowing = await getFollowing(userId)
-        setFollowing(userFollowing)
+        const userFollowing = await getFollowing(userId);
+        setFollowing(userFollowing);
       }
-    }
+    };
 
-    fetchTabData()
-  }, [tabValue, userId])
+    fetchTabData();
+  }, [tabValue, userId]);
 
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
-    setTabValue(newValue)
+    setTabValue(newValue);
+  };
+
+  const handleFollowToggle = async () => {
+    if (!currentUser || !userId) return;
+
+    setIsLoading(true);
+    try {
+      if (isFollowing) {
+        await unfollowUser(currentUser.uid, userId);
+        setIsFollowing(false);
+        setFollowerCount((prev) => Math.max(0, prev - 1));
+      } else {
+        await followUser(currentUser.uid, userId);
+        setIsFollowing(true);
+        setFollowerCount((prev) => prev + 1);
+      }
+    } catch (error) {
+      console.error("Error toggling follow status:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  if (profileLoading) {
+    return (
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          height: "50vh",
+        }}
+      >
+        <CircularProgress />
+      </Box>
+    );
   }
 
-  if (!profile) return <div>Loading...</div>
+  if (!profile) return <Typography>User not found</Typography>;
 
   // Mobile profile layout
   if (isMobileOrTablet) {
@@ -113,7 +174,11 @@ const ProfilePage = () => {
             {/* Profile Info */}
             <Box sx={{ px: 2, pb: 2 }}>
               <Box sx={{ display: "flex", mb: 3 }}>
-                <Avatar src={profile.photoURL} alt={profile.displayName} sx={{ width: 80, height: 80, mr: 2 }} />
+                <Avatar
+                  src={profile.photoURL}
+                  alt={profile.displayName}
+                  sx={{ width: 80, height: 80, mr: 2 }}
+                />
 
                 <Box
                   sx={{
@@ -130,8 +195,13 @@ const ProfilePage = () => {
                   </Typography>
 
                   {profile.location && (
-                    <Box sx={{ display: "flex", alignItems: "center", mt: 0.5 }}>
-                      <LocationOn fontSize="small" sx={{ mr: 0.5, fontSize: "0.9rem" }} />
+                    <Box
+                      sx={{ display: "flex", alignItems: "center", mt: 0.5 }}
+                    >
+                      <LocationOn
+                        fontSize="small"
+                        sx={{ mr: 0.5, fontSize: "0.9rem" }}
+                      />
                       <Typography variant="body2" color="text.secondary">
                         {profile.location}
                       </Typography>
@@ -156,7 +226,7 @@ const ProfilePage = () => {
 
                 <Box>
                   <Typography variant="body2" fontWeight="bold">
-                    {followers.length || 0}
+                    {followerCount}
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
                     Followers
@@ -165,7 +235,7 @@ const ProfilePage = () => {
 
                 <Box>
                   <Typography variant="body2" fontWeight="bold">
-                    {following.length || 0}
+                    {profile.following?.length || 0}
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
                     Following
@@ -175,11 +245,28 @@ const ProfilePage = () => {
 
               {currentUser && currentUser.uid !== profile.id && (
                 <Box sx={{ display: "flex", gap: 1 }}>
-                  <Button variant="contained" color="primary" fullWidth size="small">
-                    Follow
+                  <Button
+                    variant={isFollowing ? "outlined" : "contained"}
+                    color="primary"
+                    fullWidth
+                    size="small"
+                    onClick={handleFollowToggle}
+                    disabled={isLoading}
+                  >
+                    {isLoading
+                      ? "Processing..."
+                      : isFollowing
+                      ? "Unfollow"
+                      : "Follow"}
                   </Button>
 
-                  <Button variant="outlined" component={Link} to={`/messages/${profile.id}`} fullWidth size="small">
+                  <Button
+                    variant="outlined"
+                    component={Link}
+                    to={`/messages/${profile.id}`}
+                    fullWidth
+                    size="small"
+                  >
                     Message
                   </Button>
                 </Box>
@@ -210,7 +297,9 @@ const ProfilePage = () => {
             {tabValue === 0 && (
               <Box>
                 {posts.length === 0 ? (
-                  <Typography sx={{ textAlign: "center", my: 4 }}>No threads yet</Typography>
+                  <Typography sx={{ textAlign: "center", my: 4 }}>
+                    No threads yet
+                  </Typography>
                 ) : (
                   posts.map((post) => <Post key={post.id} post={post} />)
                 )}
@@ -221,7 +310,9 @@ const ProfilePage = () => {
             {tabValue === 1 && (
               <List disablePadding>
                 {followers.length === 0 ? (
-                  <Typography sx={{ textAlign: "center", my: 4 }}>No followers yet</Typography>
+                  <Typography sx={{ textAlign: "center", my: 4 }}>
+                    No followers yet
+                  </Typography>
                 ) : (
                   followers.map((follower) => (
                     <ListItem
@@ -236,13 +327,17 @@ const ProfilePage = () => {
                       }}
                     >
                       <ListItemAvatar>
-                        <Avatar src={follower.photoURL} alt={follower.displayName} />
+                        <Avatar
+                          src={follower.photoURL}
+                          alt={follower.displayName}
+                        />
                       </ListItemAvatar>
                       <ListItemText
                         primary={follower.displayName}
                         secondary={
                           follower.bio
-                            ? follower.bio.substring(0, 60) + (follower.bio.length > 60 ? "..." : "")
+                            ? follower.bio.substring(0, 60) +
+                              (follower.bio.length > 60 ? "..." : "")
                             : "No bio"
                         }
                       />
@@ -256,7 +351,9 @@ const ProfilePage = () => {
             {tabValue === 2 && (
               <List disablePadding>
                 {following.length === 0 ? (
-                  <Typography sx={{ textAlign: "center", my: 4 }}>Not following anyone yet</Typography>
+                  <Typography sx={{ textAlign: "center", my: 4 }}>
+                    Not following anyone yet
+                  </Typography>
                 ) : (
                   following.map((follow) => (
                     <ListItem
@@ -271,12 +368,18 @@ const ProfilePage = () => {
                       }}
                     >
                       <ListItemAvatar>
-                        <Avatar src={follow.photoURL} alt={follow.displayName} />
+                        <Avatar
+                          src={follow.photoURL}
+                          alt={follow.displayName}
+                        />
                       </ListItemAvatar>
                       <ListItemText
                         primary={follow.displayName}
                         secondary={
-                          follow.bio ? follow.bio.substring(0, 60) + (follow.bio.length > 60 ? "..." : "") : "No bio"
+                          follow.bio
+                            ? follow.bio.substring(0, 60) +
+                              (follow.bio.length > 60 ? "..." : "")
+                            : "No bio"
                         }
                       />
                     </ListItem>
@@ -287,7 +390,7 @@ const ProfilePage = () => {
           </>
         )}
       </Box>
-    )
+    );
   }
 
   // Desktop profile layout
@@ -298,11 +401,35 @@ const ProfilePage = () => {
       ) : (
         <>
           <ProfileInfo profile={profile} />
-          {currentUser?.uid === userId && (
-            <Button variant="contained" onClick={() => setIsEditing(true)} sx={{ mt: 2 }}>
-              Edit Profile
-            </Button>
-          )}
+          <Box sx={{ display: "flex", gap: 2, mt: 2 }}>
+            {currentUser?.uid === userId ? (
+              <Button variant="contained" onClick={() => setIsEditing(true)}>
+                Edit Profile
+              </Button>
+            ) : (
+              <>
+                <Button
+                  variant={isFollowing ? "outlined" : "contained"}
+                  color="primary"
+                  onClick={handleFollowToggle}
+                  disabled={isLoading}
+                >
+                  {isLoading
+                    ? "Processing..."
+                    : isFollowing
+                    ? "Unfollow"
+                    : "Follow"}
+                </Button>
+                <Button
+                  variant="outlined"
+                  component={Link}
+                  to={`/messages/${profile.id}`}
+                >
+                  Message
+                </Button>
+              </>
+            )}
+          </Box>
 
           <Box sx={{ mt: 4 }}>
             <Tabs value={tabValue} onChange={handleTabChange} centered>
@@ -315,7 +442,9 @@ const ProfilePage = () => {
             {tabValue === 0 && (
               <Box sx={{ mt: 2 }}>
                 {posts.length === 0 ? (
-                  <Typography sx={{ textAlign: "center", my: 4 }}>No threads yet</Typography>
+                  <Typography sx={{ textAlign: "center", my: 4 }}>
+                    No threads yet
+                  </Typography>
                 ) : (
                   posts.map((post) => <Post key={post.id} post={post} />)
                 )}
@@ -326,7 +455,9 @@ const ProfilePage = () => {
             {tabValue === 1 && (
               <Box sx={{ mt: 2 }}>
                 {followers.length === 0 ? (
-                  <Typography sx={{ textAlign: "center", my: 4 }}>No followers yet</Typography>
+                  <Typography sx={{ textAlign: "center", my: 4 }}>
+                    No followers yet
+                  </Typography>
                 ) : (
                   <Grid container spacing={2}>
                     {followers.map((follower) => (
@@ -341,16 +472,28 @@ const ProfilePage = () => {
                             borderRadius: 1,
                           }}
                         >
-                          <Avatar src={follower.photoURL} alt={follower.displayName} sx={{ mr: 2 }} />
+                          <Avatar
+                            src={follower.photoURL}
+                            alt={follower.displayName}
+                            sx={{ mr: 2 }}
+                          />
                           <Box sx={{ flexGrow: 1 }}>
-                            <Typography variant="subtitle1">{follower.displayName}</Typography>
+                            <Typography variant="subtitle1">
+                              {follower.displayName}
+                            </Typography>
                             <Typography variant="body2" color="text.secondary">
                               {follower.bio
-                                ? follower.bio.substring(0, 60) + (follower.bio.length > 60 ? "..." : "")
+                                ? follower.bio.substring(0, 60) +
+                                  (follower.bio.length > 60 ? "..." : "")
                                 : "No bio"}
                             </Typography>
                           </Box>
-                          <Button variant="outlined" component={Link} to={`/profile/${follower.id}`} size="small">
+                          <Button
+                            variant="outlined"
+                            component={Link}
+                            to={`/profile/${follower.id}`}
+                            size="small"
+                          >
                             View
                           </Button>
                         </Box>
@@ -365,7 +508,9 @@ const ProfilePage = () => {
             {tabValue === 2 && (
               <Box sx={{ mt: 2 }}>
                 {following.length === 0 ? (
-                  <Typography sx={{ textAlign: "center", my: 4 }}>Not following anyone yet</Typography>
+                  <Typography sx={{ textAlign: "center", my: 4 }}>
+                    Not following anyone yet
+                  </Typography>
                 ) : (
                   <Grid container spacing={2}>
                     {following.map((follow) => (
@@ -380,16 +525,28 @@ const ProfilePage = () => {
                             borderRadius: 1,
                           }}
                         >
-                          <Avatar src={follow.photoURL} alt={follow.displayName} sx={{ mr: 2 }} />
+                          <Avatar
+                            src={follow.photoURL}
+                            alt={follow.displayName}
+                            sx={{ mr: 2 }}
+                          />
                           <Box sx={{ flexGrow: 1 }}>
-                            <Typography variant="subtitle1">{follow.displayName}</Typography>
+                            <Typography variant="subtitle1">
+                              {follow.displayName}
+                            </Typography>
                             <Typography variant="body2" color="text.secondary">
                               {follow.bio
-                                ? follow.bio.substring(0, 60) + (follow.bio.length > 60 ? "..." : "")
+                                ? follow.bio.substring(0, 60) +
+                                  (follow.bio.length > 60 ? "..." : "")
                                 : "No bio"}
                             </Typography>
                           </Box>
-                          <Button variant="outlined" component={Link} to={`/profile/${follow.id}`} size="small">
+                          <Button
+                            variant="outlined"
+                            component={Link}
+                            to={`/profile/${follow.id}`}
+                            size="small"
+                          >
                             View
                           </Button>
                         </Box>
@@ -403,7 +560,7 @@ const ProfilePage = () => {
         </>
       )}
     </Box>
-  )
-}
+  );
+};
 
-export default ProfilePage
+export default ProfilePage;
