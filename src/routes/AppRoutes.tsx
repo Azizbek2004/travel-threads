@@ -10,6 +10,7 @@ import EventDetailPage from "../pages/EventDetailPage"
 import CreateEventPage from "../pages/CreateEventPage"
 import { Login, Signup } from "../components/Auth"
 import { useAuth } from "../hooks/useAuth"
+import MessageSharePage from "../pages/MessageSharePage"
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { currentUser, loading } = useAuth()
@@ -52,6 +53,14 @@ const AppRoutes = () => (
       element={
         <ProtectedRoute>
           <MessagingPage />
+        </ProtectedRoute>
+      }
+    />
+    <Route
+      path="/messages/share"
+      element={
+        <ProtectedRoute>
+          <MessageSharePage />
         </ProtectedRoute>
       }
     />

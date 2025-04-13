@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { useParams, useNavigate } from "react-router-dom"
 import { Box, Typography, Paper, IconButton, AppBar, Toolbar, Avatar, CircularProgress, useTheme } from "@mui/material"
-import { ArrowBack, MoreVert, Phone, Videocam } from "@mui/icons-material"
+import { ArrowBack, MoreVert } from "@mui/icons-material"
 import { useAuth } from "../hooks/useAuth"
 import { getUserProfile, getOrCreateConversation } from "../services/firestore"
 import MessageList from "../components/Messaging/MessageList"
@@ -107,12 +107,6 @@ const MessagingPage = () => {
               </Box>
             )}
 
-            <IconButton color="inherit">
-              <Phone />
-            </IconButton>
-            <IconButton color="inherit">
-              <Videocam />
-            </IconButton>
             <IconButton edge="end" color="inherit">
               <MoreVert />
             </IconButton>
@@ -172,12 +166,6 @@ const MessagingPage = () => {
           )}
 
           <Box>
-            <IconButton color="primary">
-              <Phone />
-            </IconButton>
-            <IconButton color="primary">
-              <Videocam />
-            </IconButton>
             <IconButton color="inherit">
               <MoreVert />
             </IconButton>

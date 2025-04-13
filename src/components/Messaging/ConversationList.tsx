@@ -25,13 +25,26 @@ import { Search, Clear } from "@mui/icons-material"
 import { onSnapshot, collection, query, where, orderBy } from "firebase/firestore"
 import { db } from "../../firebase"
 
+interface Conversation {
+  id: string
+  participants: string[]
+  lastMessage?: {
+    text: string
+    timestamp: string
+    senderId: string
+    read: boolean
+    mediaUrl?: string
+  }
+  updatedAt: string
+}
+
 // Extend dayjs with the relativeTime plugin
 dayjs.extend(relativeTime)
 
 const ConversationList = () => {
   const { currentUser } = useAuth()
-  const [conversations, setConversations] = useState<any[]>([])
-  const [filteredConversations, setFilteredConversations] = useState<any[]>([])
+  const [conversations, setConversations] = useState<Conversation[]>([])
+  const [filteredConversations, setFilteredConversations] = useState<Conversation[]>([])
   const [loading, setLoading] = useState(true)
   const [userProfiles, setUserProfiles] = useState<{ [key: string]: any }>({})
   const [searchQuery, setSearchQuery] = useState("")
@@ -54,7 +67,7 @@ const ConversationList = () => {
         const conversationsData = snapshot.docs.map((doc) => ({
           id: doc.id,
           ...doc.data(),
-        }))
+        })) as Conversation[]
 
         setConversations(conversationsData)
         setFilteredConversations(conversationsData)
@@ -97,8 +110,9 @@ const ConversationList = () => {
     const query = searchQuery.toLowerCase()
     const filtered = conversations.filter((conversation) => {
       const otherUserId = conversation.participants.find((id: string) => id !== currentUser?.uid)
-      const otherUser = userProfiles[otherUserId]
+      if (!otherUserId) return false
 
+      const otherUser = userProfiles[otherUserId]
       if (!otherUser) return false
 
       return otherUser.displayName.toLowerCase().includes(query)
@@ -160,6 +174,8 @@ const ConversationList = () => {
         <List sx={{ width: "100%", p: 0 }}>
           {filteredConversations.map((conversation) => {
             const otherUserId = conversation.participants.find((id: string) => id !== currentUser?.uid)
+            if (!otherUserId) return null
+
             const otherUser = userProfiles[otherUserId]
             const lastMessage = conversation.lastMessage
 
@@ -170,7 +186,6 @@ const ConversationList = () => {
             return (
               <Box key={conversation.id}>
                 <ListItem
-                  button
                   component={Link}
                   to={`/messages/${otherUserId}`}
                   sx={{
@@ -179,6 +194,9 @@ const ConversationList = () => {
                     "&:hover": {
                       bgcolor: unread ? "action.selected" : "action.hover",
                     },
+                    textDecoration: "none",
+                    color: "inherit",
+                    cursor: "pointer",
                   }}
                 >
                   <ListItemAvatar>

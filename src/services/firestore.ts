@@ -18,6 +18,7 @@ import {
   GeoPoint,
   serverTimestamp,
   deleteField,
+  writeBatch,
 } from "firebase/firestore"
 import type { Post, Comment, Share } from "../types/post"
 import type { UserProfile, Conversation, Message } from "../types/user"
@@ -115,7 +116,7 @@ export const deletePost = async (id: string): Promise<void> => {
     const commentsQuery = query(commentsCollection, where("postId", "==", id))
     const commentsSnapshot = await getDocs(commentsQuery)
 
-    const batch = db.batch()
+    const batch = writeBatch(db)
     commentsSnapshot.docs.forEach((doc) => {
       batch.delete(doc.ref)
     })
@@ -351,24 +352,24 @@ export const getOrCreateConversation = async (userIds: string[]): Promise<string
   // Sort user IDs to ensure consistent conversation ID
   const sortedUserIds = [...userIds].sort()
 
-  // Check if conversation already exists
+  // Check if conversation already exists between these users
+  // First, query for conversations containing the first user
   const q = query(conversationsCollection, where("participants", "array-contains", sortedUserIds[0]))
-
   const snapshot = await getDocs(q)
 
   // Find the conversation with exactly these participants
-  const existingConvo = snapshot.docs.find((doc) => {
+  for (const doc of snapshot.docs) {
     const data = doc.data()
-    return (
-      data.participants.length === sortedUserIds.length && sortedUserIds.every((id) => data.participants.includes(id))
-    )
-  })
-
-  if (existingConvo) {
-    return existingConvo.id
+    // Check if the participants array contains exactly the same users (order doesn't matter)
+    if (data.participants.length === sortedUserIds.length) {
+      const allParticipantsMatch = sortedUserIds.every((id) => data.participants.includes(id))
+      if (allParticipantsMatch) {
+        return doc.id
+      }
+    }
   }
 
-  // Create new conversation
+  // If no existing conversation found, create a new one
   const newConversation = {
     participants: sortedUserIds,
     createdAt: new Date().toISOString(),
@@ -385,10 +386,12 @@ export const sendMessage = async (
   senderId: string,
   text: string,
   mediaUrl?: string,
+  sharedPost?: any,
+  sharedEvent?: any,
 ): Promise<string> => {
   // Create new message
   const timestamp = new Date().toISOString()
-  const newMessage = {
+  const newMessage: any = {
     conversationId,
     senderId,
     text,
@@ -396,6 +399,15 @@ export const sendMessage = async (
     read: false,
     mediaUrl,
     reactions: {},
+  }
+
+  // Add shared content if provided
+  if (sharedPost) {
+    newMessage.sharedPost = sharedPost
+  }
+
+  if (sharedEvent) {
+    newMessage.sharedEvent = sharedEvent
   }
 
   // Add message to messages collection
@@ -410,6 +422,7 @@ export const sendMessage = async (
       senderId,
       read: false,
       mediaUrl,
+      hasSharedContent: !!(sharedPost || sharedEvent),
     },
     updatedAt: timestamp,
   })
@@ -436,38 +449,42 @@ export const getMessages = async (conversationId: string): Promise<Message[]> =>
 }
 
 export const markMessagesAsRead = async (conversationId: string, userId: string): Promise<void> => {
-  // Get unread messages sent by the other user
-  const q = query(
-    messagesCollection,
-    where("conversationId", "==", conversationId),
-    where("read", "==", false),
-    where("senderId", "!=", userId),
-  )
+  try {
+    // Get unread messages sent by the other user
+    const q = query(
+      messagesCollection,
+      where("conversationId", "==", conversationId),
+      where("read", "==", false),
+      where("senderId", "!=", userId),
+    )
 
-  const snapshot = await getDocs(q)
+    const snapshot = await getDocs(q)
 
-  // If there are unread messages
-  if (!snapshot.empty) {
-    // Update all messages to read
-    const batch = db.batch()
-    snapshot.docs.forEach((doc) => {
-      batch.update(doc.ref, { read: true })
-    })
+    // If there are unread messages
+    if (!snapshot.empty) {
+      // Update all messages to read
+      const batch = writeBatch(db)
+      snapshot.docs.forEach((doc) => {
+        batch.update(doc.ref, { read: true })
+      })
 
-    // Also update the conversation's lastMessage if it's unread
-    const conversationRef = doc(db, "conversations", conversationId)
-    const conversationSnap = await getDoc(conversationRef)
+      // Also update the conversation's lastMessage if it's unread
+      const conversationRef = doc(db, "conversations", conversationId)
+      const conversationSnap = await getDoc(conversationRef)
 
-    if (conversationSnap.exists()) {
-      const convoData = conversationSnap.data()
-      if (convoData.lastMessage && !convoData.lastMessage.read && convoData.lastMessage.senderId !== userId) {
-        batch.update(conversationRef, {
-          "lastMessage.read": true,
-        })
+      if (conversationSnap.exists()) {
+        const convoData = conversationSnap.data()
+        if (convoData.lastMessage && !convoData.lastMessage.read && convoData.lastMessage.senderId !== userId) {
+          batch.update(conversationRef, {
+            "lastMessage.read": true,
+          })
+        }
       }
-    }
 
-    await batch.commit()
+      await batch.commit()
+    }
+  } catch (error) {
+    console.error("Error marking messages as read:", error)
   }
 }
 

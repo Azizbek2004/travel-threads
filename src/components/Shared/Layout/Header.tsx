@@ -28,6 +28,7 @@ import {
   Event as EventIcon,
   Search as SearchIcon,
   ArrowBack,
+  FlightTakeoff,
 } from "@mui/icons-material"
 import { useMobile } from "../../../hooks/use-mobile"
 
@@ -52,7 +53,7 @@ const Header = () => {
     e.preventDefault()
     if (searchQuery.trim()) {
       navigate(`/search?query=${encodeURIComponent(searchQuery)}`)
-      setSearchQuery("") // Clear input after search
+      setSearchQuery("")
     }
   }
 
@@ -97,7 +98,33 @@ const Header = () => {
     handleMenuClose()
   }
 
-  // Mobile header is simplified
+  const Logo = () => (
+    <Box
+      component={Link}
+      to="/"
+      sx={{
+        display: "flex",
+        alignItems: "center",
+        textDecoration: "none",
+        color: "inherit",
+      }}
+    >
+      <img src="/logo.svg" alt="" height="36px" style={{ marginRight: '12px' }} />
+      <Typography
+        variant="h6"
+        sx={{
+          fontWeight: "bold",
+          fontSize: isMobileView ? "1.1rem" : "1.2rem",
+          whiteSpace: "nowrap",
+          overflow: "hidden",
+          textOverflow: "ellipsis",
+        }}
+      >
+        Beyond Borders
+      </Typography>
+    </Box>
+  )
+
   if (isMobileView) {
     return (
       <AppBar
@@ -108,7 +135,7 @@ const Header = () => {
           borderBottom: 1,
           borderColor: "divider",
           width: "100%",
-          maxWidth: "100%",
+          maxWidth: "100vw",
           overflow: "hidden",
         }}
       >
@@ -119,25 +146,10 @@ const Header = () => {
             minHeight: 56,
             px: 2,
             width: "100%",
+            maxWidth: "100%",
           }}
         >
-          {/* Logo */}
-          <Typography
-            variant="h6"
-            component={Link}
-            to="/"
-            sx={{
-              textDecoration: "none",
-              color: "inherit",
-              fontWeight: "bold",
-              fontSize: "1.1rem",
-              whiteSpace: "nowrap",
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-            }}
-          >
-            Travel Threads
-          </Typography>
+          <Logo />
 
           {/* Right side actions */}
           <Box sx={{ display: "flex", alignItems: "center" }}>
@@ -193,116 +205,117 @@ const Header = () => {
         backgroundColor: "background.paper",
         color: "text.primary",
         width: "100%",
-        maxWidth: "100%",
+        maxWidth: "100vw",
         overflow: "hidden",
       }}
     >
-      <Toolbar sx={{ width: "100%" }}>
-        <Typography variant="h6" component={Link} to="/" sx={{ flexGrow: 1, textDecoration: "none", color: "inherit" }}>
-          Travel Threads
-        </Typography>
+      <Toolbar sx={{ width: "100%", px: 2 }}>
+        <Logo />
 
-        {!isSearchPage && (
-          <form onSubmit={handleSearch}>
-            <TextField
-              variant="outlined"
-              size="small"
-              placeholder="Search..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              sx={{
-                backgroundColor: "white",
-                borderRadius: 1,
-                mr: 2,
-                width: "200px",
-              }}
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <SearchIcon fontSize="small" />
-                  </InputAdornment>
-                ),
-              }}
-            />
-          </form>
-        )}
-
-        {currentUser && (
-          <Tooltip title="Create">
-            <IconButton color="inherit" onClick={handleCreateMenuOpen} sx={{ mr: 1 }}>
-              <AddIcon />
-            </IconButton>
-          </Tooltip>
-        )}
-
-        <Menu
-          anchorEl={createMenuAnchorEl}
-          open={Boolean(createMenuAnchorEl)}
-          onClose={handleMenuClose}
-          anchorOrigin={{
-            vertical: "bottom",
-            horizontal: "right",
-          }}
-          transformOrigin={{
-            vertical: "top",
-            horizontal: "right",
-          }}
-        >
-          <MenuItem onClick={handleCreatePost}>
-            <span className="material-icons-outlined" style={{ marginRight: 8 }}>
-              post_add
-            </span>
-            Create Post
-          </MenuItem>
-          <MenuItem onClick={handleCreateEvent}>
-            <EventIcon sx={{ mr: 1 }} />
-            Create Event
-          </MenuItem>
-        </Menu>
-
-        <IconButton color="inherit" component={Link} to="/events">
-          <EventIcon />
-        </IconButton>
-
-        {currentUser ? (
-          <>
-            <IconButton color="inherit" component={Link} to="/messages">
-              <Badge badgeContent={0} color="error">
-                <Message />
-              </Badge>
-            </IconButton>
-
-            <IconButton color="inherit">
-              <Badge badgeContent={0} color="error">
-                <Notifications />
-              </Badge>
-            </IconButton>
-
-            <IconButton color="inherit" onClick={handleProfileMenuOpen} sx={{ ml: 1 }}>
-              <Avatar
-                src={currentUser.photoURL || undefined}
-                alt={currentUser.displayName || "User"}
-                sx={{ width: 32, height: 32 }}
+        <Box sx={{ flexGrow: 1, display: "flex", justifyContent: "center" }}>
+          {!isSearchPage && (
+            <form onSubmit={handleSearch}>
+              <TextField
+                variant="outlined"
+                size="small"
+                placeholder="Search..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                sx={{
+                  backgroundColor: "white",
+                  borderRadius: 1,
+                  width: "300px",
+                }}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <SearchIcon fontSize="small" />
+                    </InputAdornment>
+                  ),
+                }}
               />
-            </IconButton>
+            </form>
+          )}
+        </Box>
 
-            <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={handleMenuClose}>
-              <MenuItem component={Link} to={`/profile/${currentUser.uid}`} onClick={handleMenuClose}>
-                Profile
-              </MenuItem>
-              <MenuItem onClick={handleLogout}>Logout</MenuItem>
-            </Menu>
-          </>
-        ) : (
-          <>
-            <Button color="inherit" component={Link} to="/login">
-              Login
-            </Button>
-            <Button color="inherit" component={Link} to="/signup">
-              Signup
-            </Button>
-          </>
-        )}
+        <Box sx={{ display: "flex", alignItems: "center" }}>
+          {currentUser && (
+            <Tooltip title="Create">
+              <IconButton color="inherit" onClick={handleCreateMenuOpen} sx={{ mr: 1 }}>
+                <AddIcon />
+              </IconButton>
+            </Tooltip>
+          )}
+
+          <Menu
+            anchorEl={createMenuAnchorEl}
+            open={Boolean(createMenuAnchorEl)}
+            onClose={handleMenuClose}
+            anchorOrigin={{
+              vertical: "bottom",
+              horizontal: "right",
+            }}
+            transformOrigin={{
+              vertical: "top",
+              horizontal: "right",
+            }}
+          >
+            <MenuItem onClick={handleCreatePost}>
+              <span className="material-icons-outlined" style={{ marginRight: 8 }}>
+                post_add
+              </span>
+              Create Post
+            </MenuItem>
+            <MenuItem onClick={handleCreateEvent}>
+              <EventIcon sx={{ mr: 1 }} />
+              Create Event
+            </MenuItem>
+          </Menu>
+
+          <IconButton color="inherit" component={Link} to="/events">
+            <EventIcon />
+          </IconButton>
+
+          {currentUser ? (
+            <>
+              <IconButton color="inherit" component={Link} to="/messages">
+                <Badge badgeContent={0} color="error">
+                  <Message />
+                </Badge>
+              </IconButton>
+
+              <IconButton color="inherit">
+                <Badge badgeContent={0} color="error">
+                  <Notifications />
+                </Badge>
+              </IconButton>
+
+              <IconButton color="inherit" onClick={handleProfileMenuOpen} sx={{ ml: 1 }}>
+                <Avatar
+                  src={currentUser.photoURL || undefined}
+                  alt={currentUser.displayName || "User"}
+                  sx={{ width: 32, height: 32 }}
+                />
+              </IconButton>
+
+              <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={handleMenuClose}>
+                <MenuItem component={Link} to={`/profile/${currentUser.uid}`} onClick={handleMenuClose}>
+                  Profile
+                </MenuItem>
+                <MenuItem onClick={handleLogout}>Logout</MenuItem>
+              </Menu>
+            </>
+          ) : (
+            <>
+              <Button color="inherit" component={Link} to="/login">
+                Login
+              </Button>
+              <Button color="inherit" component={Link} to="/signup">
+                Signup
+              </Button>
+            </>
+          )}
+        </Box>
       </Toolbar>
     </AppBar>
   )

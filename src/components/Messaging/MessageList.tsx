@@ -20,8 +20,36 @@ import { useAuth } from "../../hooks/useAuth"
 import { onSnapshot, collection, query, where, orderBy } from "firebase/firestore"
 import { db } from "../../firebase"
 import dayjs from "dayjs"
-import { MoreVert, ContentCopy, Reply, Delete } from "@mui/icons-material"
+import { MoreVert, ContentCopy, Reply, Delete, Event } from "@mui/icons-material"
 import { useMobile } from "../../hooks/use-mobile"
+import { Link } from "react-router-dom"
+
+interface Message {
+  id: string
+  conversationId: string
+  senderId: string
+  text: string
+  timestamp: string
+  read: boolean
+  mediaUrl?: string
+  sharedPost?: {
+    id: string
+    title: string
+    content: string
+    authorId: string
+  }
+  sharedEvent?: {
+    id: string
+    title: string
+    startDate: string
+    location?: {
+      name: string
+    }
+  }
+  reactions?: {
+    [userId: string]: string
+  }
+}
 
 interface MessageListProps {
   conversationId: string
@@ -31,12 +59,12 @@ interface MessageListProps {
 
 const MessageList = ({ conversationId, otherUserId, onReply }: MessageListProps) => {
   const { currentUser } = useAuth()
-  const [messages, setMessages] = useState<any[]>([])
+  const [messages, setMessages] = useState<Message[]>([])
   const [loading, setLoading] = useState(true)
   const [otherUser, setOtherUser] = useState<any>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const [menuAnchorEl, setMenuAnchorEl] = useState<null | HTMLElement>(null)
-  const [selectedMessage, setSelectedMessage] = useState<any>(null)
+  const [selectedMessage, setSelectedMessage] = useState<Message | null>(null)
   const { isMobileOrTablet } = useMobile()
 
   // Fetch other user's profile
@@ -71,14 +99,18 @@ const MessageList = ({ conversationId, otherUserId, onReply }: MessageListProps)
         const messagesData = snapshot.docs.map((doc) => ({
           id: doc.id,
           ...doc.data(),
-        }))
+        })) as Message[]
 
         setMessages(messagesData)
         setLoading(false)
 
-        // Mark messages as read
-        if (messagesData.some((msg) => msg.senderId !== currentUser.uid && !msg.read)) {
-          markMessagesAsRead(conversationId, currentUser.uid)
+        // Mark messages as read if there are unread messages from the other user
+        const unreadMessages = messagesData.filter((msg) => msg.senderId !== currentUser.uid && !msg.read)
+
+        if (unreadMessages.length > 0) {
+          markMessagesAsRead(conversationId, currentUser.uid).catch((error) =>
+            console.error("Error marking messages as read:", error),
+          )
         }
       },
       (error) => {
@@ -95,7 +127,7 @@ const MessageList = ({ conversationId, otherUserId, onReply }: MessageListProps)
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
   }, [messages])
 
-  const handleMenuOpen = (event: React.MouseEvent<HTMLElement>, message: any) => {
+  const handleMenuOpen = (event: React.MouseEvent<HTMLElement>, message: Message) => {
     setMenuAnchorEl(event.currentTarget)
     setSelectedMessage(message)
   }
@@ -120,7 +152,7 @@ const MessageList = ({ conversationId, otherUserId, onReply }: MessageListProps)
   }
 
   // Group messages by date
-  const groupedMessages = messages.reduce((groups: any, message: any) => {
+  const groupedMessages = messages.reduce((groups: Record<string, Message[]>, message: Message) => {
     const date = dayjs(message.timestamp).format("YYYY-MM-DD")
     if (!groups[date]) {
       groups[date] = []
@@ -156,7 +188,7 @@ const MessageList = ({ conversationId, otherUserId, onReply }: MessageListProps)
         py: 1,
       }}
     >
-      {Object.entries(groupedMessages).map(([date, msgs]: [string, any]) => (
+      {Object.entries(groupedMessages).map(([date, msgs]) => (
         <Box key={date}>
           <Box
             sx={{
@@ -179,7 +211,7 @@ const MessageList = ({ conversationId, otherUserId, onReply }: MessageListProps)
             </Typography>
           </Box>
 
-          {msgs.map((message: any) => {
+          {msgs.map((message) => {
             const isCurrentUser = message.senderId === currentUser?.uid
 
             return (
@@ -213,6 +245,78 @@ const MessageList = ({ conversationId, otherUserId, onReply }: MessageListProps)
                     }}
                   >
                     <Typography variant="body1">{message.text}</Typography>
+
+                    {message.sharedPost && (
+                      <Paper
+                        elevation={0}
+                        sx={{
+                          mt: 1,
+                          p: 1,
+                          bgcolor: "background.default",
+                          border: "1px solid",
+                          borderColor: "divider",
+                          borderRadius: 1,
+                        }}
+                        component={Link}
+                        to={`/post/${message.sharedPost.id}`}
+                      >
+                        <Typography variant="subtitle2" color="primary">
+                          Shared Post: {message.sharedPost.title}
+                        </Typography>
+                        <Typography variant="body2" noWrap>
+                          {message.sharedPost.content.substring(0, 60)}...
+                        </Typography>
+                      </Paper>
+                    )}
+
+                    {message.sharedEvent && (
+                      <Paper
+                        elevation={0}
+                        sx={{
+                          mt: 1,
+                          p: 1,
+                          bgcolor: "background.default",
+                          border: "1px solid",
+                          borderColor: "divider",
+                          borderRadius: 1,
+                        }}
+                        component={Link}
+                        to={`/event/${message.sharedEvent.id}`}
+                      >
+                        <Box sx={{ display: "flex", alignItems: "center" }}>
+                          <Event fontSize="small" sx={{ mr: 1, color: "primary.main" }} />
+                          <Typography variant="subtitle2" color="primary">
+                            {message.sharedEvent.title}
+                          </Typography>
+                        </Box>
+                        {message.sharedEvent.startDate && (
+                          <Typography variant="caption" display="block">
+                            {new Date(message.sharedEvent.startDate).toLocaleDateString()}
+                          </Typography>
+                        )}
+                        {message.sharedEvent.location?.name && (
+                          <Typography variant="caption" display="block">
+                            {message.sharedEvent.location.name}
+                          </Typography>
+                        )}
+                      </Paper>
+                    )}
+
+                    {message.mediaUrl && (
+                      <Box sx={{ mt: 1, maxWidth: "100%" }}>
+                        <img
+                          src={message.mediaUrl || "/placeholder.svg"}
+                          alt="Shared media"
+                          style={{
+                            maxWidth: "100%",
+                            maxHeight: "200px",
+                            borderRadius: "8px",
+                            cursor: "pointer",
+                          }}
+                          onClick={() => window.open(message.mediaUrl, "_blank")}
+                        />
+                      </Box>
+                    )}
 
                     <IconButton
                       size="small"

@@ -109,6 +109,27 @@ const EventCard = ({ event, isDetail = false }: EventCardProps) => {
     }
   }
 
+  const handleShareViaMessage = () => {
+    if (!currentUser) {
+      navigate("/login", { state: { from: `/event/${event.id}` } })
+      return
+    }
+
+    // Navigate to messages with event data in state
+    navigate("/messages", {
+      state: {
+        shareEvent: {
+          id: event.id,
+          title: event.title,
+          startDate: event.startDate,
+          location: event.location,
+        },
+      },
+    })
+
+    handleMenuClose()
+  }
+
   // Format dates with dayjs
   const startDate = dayjs(event.startDate)
   const endDate = dayjs(event.endDate)
@@ -169,6 +190,13 @@ const EventCard = ({ event, isDetail = false }: EventCardProps) => {
             <Person fontSize="small" sx={{ mr: 1, color: "text.secondary" }} />
             <Typography variant="body2" color="text.secondary">
               {attendeeCount} {attendeeCount === 1 ? "attendee" : "attendees"}
+            </Typography>
+          </Box>
+
+          <Box sx={{ display: "flex", alignItems: "center", mb: 1 }}>
+            <Star fontSize="small" sx={{ mr: 1, color: "text.secondary" }} />
+            <Typography variant="body2" color="text.secondary">
+              {interestedCount} interested
             </Typography>
           </Box>
 
@@ -234,7 +262,7 @@ const EventCard = ({ event, isDetail = false }: EventCardProps) => {
               Edit Event
             </MenuItem>
           )}
-          <MenuItem onClick={handleMenuClose}>Share Event</MenuItem>
+          <MenuItem onClick={handleShareViaMessage}>Share via Message</MenuItem>
         </Menu>
       </Card>
     )
@@ -299,6 +327,13 @@ const EventCard = ({ event, isDetail = false }: EventCardProps) => {
           <Typography variant="body1" color="text.secondary">
             {attendeeCount} {attendeeCount === 1 ? "attendee" : "attendees"}
             {event.maxAttendees && ` (max ${event.maxAttendees})`}
+          </Typography>
+        </Box>
+
+        <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
+          <Star sx={{ mr: 1, color: "text.secondary" }} />
+          <Typography variant="body1" color="text.secondary">
+            {interestedCount} interested
           </Typography>
         </Box>
 
@@ -368,7 +403,7 @@ const EventCard = ({ event, isDetail = false }: EventCardProps) => {
             Edit Event
           </MenuItem>
         )}
-        <MenuItem onClick={handleMenuClose}>Share Event</MenuItem>
+        <MenuItem onClick={handleShareViaMessage}>Share Event</MenuItem>
         {currentUser && currentUser.uid === event.authorId && (
           <MenuItem onClick={handleMenuClose} sx={{ color: "error.main" }}>
             Delete Event

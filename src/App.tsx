@@ -33,6 +33,7 @@ function AppContent() {
         flexDirection: "column",
         minHeight: "100vh",
         width: "100%",
+        maxWidth: "100vw",
         overflow: "hidden",
       }}
     >
@@ -42,6 +43,7 @@ function AppContent() {
         sx={{
           flexGrow: 1,
           width: "100%",
+          maxWidth: "100vw",
           pt: isMobileOrTablet ? 0 : 2,
           pb: isMobileOrTablet ? 8 : 2,
           display: "flex",
@@ -53,8 +55,9 @@ function AppContent() {
           disableGutters
           sx={{
             width: "100%",
+            maxWidth: "100vw",
             flexGrow: 1,
-            overflow: "auto",
+            overflow: "hidden",
             boxSizing: "border-box",
             px: 0,
           }}

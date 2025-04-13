@@ -34,6 +34,7 @@ import {
   TagFaces,
   TrendingUp,
   KeyboardArrowDown,
+  FlightTakeoff,
 } from "@mui/icons-material"
 import { useNavigate } from "react-router-dom"
 import { useMobile } from "../hooks/use-mobile"
@@ -265,11 +266,12 @@ const Home = () => {
   }
 
   return (
-    <Box sx={{ p: isMobileOrTablet ? 0 : 2, width: "100%" }}>
+    <Box sx={{ p: isMobileOrTablet ? 0 : 2, width: "100%", maxWidth: "100vw", overflow: "hidden" }}>
       {!isMobileOrTablet && (
-        <Typography variant="h4" gutterBottom>
-          Travel Threads
-        </Typography>
+        <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
+         <img src="/logo.svg" alt="" height="36px" style={{ marginRight: '12px' }} />
+          <Typography variant="h4">Beyond Borders</Typography>
+        </Box>
       )}
 
       {/* Mobile Stories/Suggested Users Row */}
@@ -460,36 +462,38 @@ const Home = () => {
       )}
 
       {/* Feed Content */}
-      {loading && posts.length === 0 ? (
-        <Box sx={{ display: "flex", justifyContent: "center", my: 4, width: "100%" }}>
-          <CircularProgress />
-        </Box>
-      ) : filteredPosts.length === 0 ? (
-        <Typography sx={{ textAlign: "center", my: 4, width: "100%" }}>
-          {tabValue === 1
-            ? searchQuery || locationFilter
-              ? "No matching posts found in your following feed"
-              : "Follow users to see their posts here!"
-            : searchQuery || locationFilter
-              ? "No matching posts found"
-              : "No posts found"}
-        </Typography>
-      ) : (
-        <InfiniteScroll
-          dataLength={filteredPosts.length}
-          next={loadMorePosts}
-          hasMore={hasMore && !searchQuery && !locationFilter}
-          loader={<CircularProgress sx={{ display: "block", mx: "auto", my: 2 }} />}
-          endMessage={
-            <Typography sx={{ textAlign: "center", mt: 2, mb: isMobileOrTablet ? 8 : 2 }}>No more posts</Typography>
-          }
-          style={{ width: "100%" }}
-        >
-          {filteredPosts.map((post) => (
-            <Post key={post.id} post={post} />
-          ))}
-        </InfiniteScroll>
-      )}
+      <Box sx={{ width: "100%", maxWidth: "100%", overflow: "hidden" }}>
+        {loading && posts.length === 0 ? (
+          <Box sx={{ display: "flex", justifyContent: "center", my: 4, width: "100%" }}>
+            <CircularProgress />
+          </Box>
+        ) : filteredPosts.length === 0 ? (
+          <Typography sx={{ textAlign: "center", my: 4, width: "100%" }}>
+            {tabValue === 1
+              ? searchQuery || locationFilter
+                ? "No matching posts found in your following feed"
+                : "Follow users to see their posts here!"
+              : searchQuery || locationFilter
+                ? "No matching posts found"
+                : "No posts found"}
+          </Typography>
+        ) : (
+          <InfiniteScroll
+            dataLength={filteredPosts.length}
+            next={loadMorePosts}
+            hasMore={hasMore && !searchQuery && !locationFilter}
+            loader={<CircularProgress sx={{ display: "block", mx: "auto", my: 2 }} />}
+            endMessage={
+              <Typography sx={{ textAlign: "center", mt: 2, mb: isMobileOrTablet ? 8 : 2 }}>No more posts</Typography>
+            }
+            style={{ width: "100%", overflow: "visible" }}
+          >
+            {filteredPosts.map((post) => (
+              <Post key={post.id} post={post} />
+            ))}
+          </InfiniteScroll>
+        )}
+      </Box>
     </Box>
   )
 }

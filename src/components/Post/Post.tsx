@@ -30,7 +30,7 @@ import {
   Alert,
   Skeleton,
 } from "@mui/material"
-import { Link } from "react-router-dom"
+import { Link, useNavigate } from "react-router-dom"
 import {
   Favorite,
   FavoriteBorder,
@@ -45,6 +45,7 @@ import {
   WhatsApp,
   Reply,
   LocationOn,
+  Message,
 } from "@mui/icons-material"
 import { useAuth } from "../../hooks/useAuth"
 import {
@@ -103,6 +104,7 @@ const Post = ({ post, isDetail = false }: PostProps) => {
   const [snackbarMessage, setSnackbarMessage] = useState("")
   const [loading, setLoading] = useState(true)
   const commentInputRef = useRef<HTMLInputElement>(null)
+  const navigate = useNavigate()
 
   useEffect(() => {
     const fetchAuthor = async () => {
@@ -254,6 +256,27 @@ const Post = ({ post, isDetail = false }: PostProps) => {
 
   const handleSnackbarClose = () => {
     setSnackbarOpen(false)
+  }
+
+  const handleShareViaMessage = async () => {
+    if (!currentUser) {
+      navigate("/login", { state: { from: `/post/${post.id}` } })
+      return
+    }
+
+    // Navigate to messages with post data in state
+    navigate("/messages", {
+      state: {
+        sharePost: {
+          id: post.id,
+          title: post.title,
+          content: post.content,
+          authorId: post.authorId,
+        },
+      },
+    })
+
+    handleMenuClose()
   }
 
   const CommentItem = ({ comment }: { comment: Comment }) => {
@@ -879,6 +902,10 @@ const Post = ({ post, isDetail = false }: PostProps) => {
           <MenuItem onClick={handleOpenShareDialog}>
             <Repeat fontSize="small" sx={{ mr: 1 }} />
             Repost
+          </MenuItem>
+          <MenuItem onClick={handleShareViaMessage}>
+            <Message fontSize="small" sx={{ mr: 1 }} />
+            Share via Message
           </MenuItem>
           <MenuItem onClick={handleShareMenuClose}>
             <Twitter fontSize="small" sx={{ mr: 1 }} />
