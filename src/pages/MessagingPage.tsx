@@ -1,93 +1,214 @@
 "use client"
 
-import type React from "react"
 import { useState, useEffect } from "react"
-import { useParams } from "react-router-dom"
-import { Box, Typography, TextField, Button, List, ListItem, ListItemText } from "@mui/material"
+import { useParams, useNavigate } from "react-router-dom"
+import { Box, Typography, Paper, IconButton, AppBar, Toolbar, Avatar, CircularProgress, useTheme } from "@mui/material"
+import { ArrowBack, MoreVert, Phone, Videocam } from "@mui/icons-material"
 import { useAuth } from "../hooks/useAuth"
-import { getMessages, sendMessage } from "../services/firestore"
+import { getUserProfile, getOrCreateConversation } from "../services/firestore"
+import MessageList from "../components/Messaging/MessageList"
+import SendMessage from "../components/Messaging/SendMessage"
+import { useMobile } from "../hooks/use-mobile"
 
 const MessagingPage = () => {
   const { userId } = useParams<{ userId: string }>()
   const { currentUser } = useAuth()
-  const [messages, setMessages] = useState<any[]>([])
-  const [newMessage, setNewMessage] = useState("")
+  const navigate = useNavigate()
+  const theme = useTheme()
+  const { isMobileOrTablet } = useMobile()
+  const [otherUser, setOtherUser] = useState<any>(null)
+  const [conversationId, setConversationId] = useState<string>("")
+  const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [replyText, setReplyText] = useState<string>("")
 
   useEffect(() => {
-    if (!currentUser || !userId) return
+    if (!currentUser || !userId) {
+      navigate("/login")
+      return
+    }
 
-    const fetchMessages = async () => {
+    const initializeConversation = async () => {
+      setLoading(true)
       try {
-        const fetchedMessages = await getMessages(currentUser.uid)
-        setMessages(fetchedMessages.filter((msg) => msg.from === userId || msg.to === userId))
+        // Get other user's profile
+        const userProfile = await getUserProfile(userId)
+        setOtherUser(userProfile)
+
+        if (!userProfile) {
+          setError("User not found")
+          setLoading(false)
+          return
+        }
+
+        // Get or create conversation
+        const convoId = await getOrCreateConversation([currentUser.uid, userId])
+        setConversationId(convoId)
       } catch (err: any) {
-        setError("Failed to load messages: " + err.message)
+        console.error("Error initializing conversation:", err)
+        setError("Failed to load conversation: " + err.message)
+      } finally {
+        setLoading(false)
       }
     }
-    fetchMessages()
-  }, [currentUser, userId])
 
-  const handleSendMessage = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!currentUser || !userId || !newMessage.trim()) return
+    initializeConversation()
+  }, [currentUser, userId, navigate])
 
-    try {
-      await sendMessage({
-        from: currentUser.uid,
-        to: userId,
-        text: newMessage,
-      })
-      setNewMessage("")
-      // Refresh messages
-      const updatedMessages = await getMessages(currentUser.uid)
-      setMessages(updatedMessages.filter((msg) => msg.from === userId || msg.to === userId))
-    } catch (err: any) {
-      setError("Failed to send message: " + err.message)
-    }
+  const handleReply = (text: string) => {
+    setReplyText(text)
+  }
+
+  const handleClearReply = () => {
+    setReplyText("")
   }
 
   if (!currentUser) {
     return <Typography>Please log in to view messages.</Typography>
   }
 
+  if (loading) {
+    return (
+      <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", height: "50vh" }}>
+        <CircularProgress />
+      </Box>
+    )
+  }
+
+  if (error) {
+    return (
+      <Box sx={{ p: 2, maxWidth: "1200px", mx: "auto", width: "100%" }}>
+        <Typography color="error">{error}</Typography>
+      </Box>
+    )
+  }
+
+  // Mobile layout
+  if (isMobileOrTablet) {
+    return (
+      <Box sx={{ height: "100vh", display: "flex", flexDirection: "column" }}>
+        <AppBar position="static" color="default" elevation={1}>
+          <Toolbar>
+            <IconButton edge="start" color="inherit" onClick={() => navigate(-1)}>
+              <ArrowBack />
+            </IconButton>
+
+            {otherUser && (
+              <Box sx={{ display: "flex", alignItems: "center", ml: 1, flexGrow: 1 }}>
+                <Avatar src={otherUser.photoURL} alt={otherUser.displayName} sx={{ width: 40, height: 40, mr: 1.5 }}>
+                  {otherUser.displayName?.charAt(0) || "U"}
+                </Avatar>
+                <Box>
+                  <Typography variant="subtitle1">{otherUser.displayName}</Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    {otherUser.isOnline ? "Online" : "Offline"}
+                  </Typography>
+                </Box>
+              </Box>
+            )}
+
+            <IconButton color="inherit">
+              <Phone />
+            </IconButton>
+            <IconButton color="inherit">
+              <Videocam />
+            </IconButton>
+            <IconButton edge="end" color="inherit">
+              <MoreVert />
+            </IconButton>
+          </Toolbar>
+        </AppBar>
+
+        <Box sx={{ flexGrow: 1, overflow: "hidden", bgcolor: theme.palette.grey[50] }}>
+          {conversationId && (
+            <MessageList conversationId={conversationId} otherUserId={userId || ""} onReply={handleReply} />
+          )}
+        </Box>
+
+        <Box sx={{ p: 2, bgcolor: "background.paper", borderTop: 1, borderColor: "divider" }}>
+          {conversationId && (
+            <SendMessage
+              conversationId={conversationId}
+              otherUserId={userId || ""}
+              replyText={replyText}
+              onClearReply={handleClearReply}
+            />
+          )}
+        </Box>
+      </Box>
+    )
+  }
+
+  // Desktop layout
   return (
     <Box sx={{ p: 2, maxWidth: "1200px", mx: "auto", width: "100%" }}>
-      <Typography variant="h4" gutterBottom>
-        Messages with User {userId}
-      </Typography>
-      {error && <Typography color="error">{error}</Typography>}
-      <List sx={{ maxHeight: "50vh", overflow: "auto", mb: 2 }}>
-        {messages.map((msg) => (
-          <ListItem key={msg.id}>
-            <ListItemText
-              primary={msg.text}
-              secondary={`From: ${
-                msg.from === currentUser.uid ? "You" : msg.from
-              } - ${new Date(msg.timestamp).toLocaleString()}`}
-              sx={{
-                bgcolor: msg.from === currentUser.uid ? "grey.200" : "white",
-                p: 1,
-                borderRadius: 1,
-              }}
+      <Paper elevation={2} sx={{ height: "75vh", display: "flex", flexDirection: "column" }}>
+        {/* Header */}
+        <Box
+          sx={{
+            p: 2,
+            display: "flex",
+            alignItems: "center",
+            borderBottom: 1,
+            borderColor: "divider",
+          }}
+        >
+          <IconButton edge="start" color="inherit" onClick={() => navigate(-1)} sx={{ mr: 1 }}>
+            <ArrowBack />
+          </IconButton>
+
+          {otherUser && (
+            <Box sx={{ display: "flex", alignItems: "center", flexGrow: 1 }}>
+              <Avatar src={otherUser.photoURL} alt={otherUser.displayName} sx={{ width: 48, height: 48, mr: 2 }}>
+                {otherUser.displayName?.charAt(0) || "U"}
+              </Avatar>
+              <Box>
+                <Typography variant="h6">{otherUser.displayName}</Typography>
+                <Typography variant="body2" color="text.secondary">
+                  {otherUser.isOnline ? "Online" : "Last seen recently"}
+                </Typography>
+              </Box>
+            </Box>
+          )}
+
+          <Box>
+            <IconButton color="primary">
+              <Phone />
+            </IconButton>
+            <IconButton color="primary">
+              <Videocam />
+            </IconButton>
+            <IconButton color="inherit">
+              <MoreVert />
+            </IconButton>
+          </Box>
+        </Box>
+
+        {/* Messages */}
+        <Box
+          sx={{
+            flexGrow: 1,
+            overflow: "hidden",
+            bgcolor: theme.palette.grey[50],
+          }}
+        >
+          {conversationId && (
+            <MessageList conversationId={conversationId} otherUserId={userId || ""} onReply={handleReply} />
+          )}
+        </Box>
+
+        {/* Message Input */}
+        <Box sx={{ p: 2, bgcolor: "background.paper", borderTop: 1, borderColor: "divider" }}>
+          {conversationId && (
+            <SendMessage
+              conversationId={conversationId}
+              otherUserId={userId || ""}
+              replyText={replyText}
+              onClearReply={handleClearReply}
             />
-          </ListItem>
-        ))}
-      </List>
-      <Box component="form" onSubmit={handleSendMessage}>
-        <TextField
-          label="Type a message"
-          value={newMessage}
-          onChange={(e) => setNewMessage(e.target.value)}
-          fullWidth
-          multiline
-          rows={2}
-          margin="normal"
-        />
-        <Button type="submit" variant="contained" color="primary" sx={{ mt: 2 }}>
-          Send
-        </Button>
-      </Box>
+          )}
+        </Box>
+      </Paper>
     </Box>
   )
 }

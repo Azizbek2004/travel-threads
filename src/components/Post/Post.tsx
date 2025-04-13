@@ -522,7 +522,7 @@ const Post = ({ post, isDetail = false }: PostProps) => {
       >
         {/* Post Header */}
         <Box sx={{ display: "flex", alignItems: "center", p: 2, pb: 1 }}>
-          {author && (
+          {author ? (
             <>
               <Avatar
                 src={author.photoURL}
@@ -568,6 +568,14 @@ const Post = ({ post, isDetail = false }: PostProps) => {
                 {currentUser && currentUser.uid !== post.authorId && <MenuItem>Report</MenuItem>}
               </Menu>
             </>
+          ) : (
+            <Box sx={{ display: "flex", alignItems: "center", width: "100%" }}>
+              <Skeleton variant="circular" width={36} height={36} sx={{ mr: 1.5 }} />
+              <Box sx={{ flexGrow: 1 }}>
+                <Skeleton variant="text" width="60%" height={20} />
+                <Skeleton variant="text" width="40%" height={16} />
+              </Box>
+            </Box>
           )}
         </Box>
 
@@ -582,16 +590,37 @@ const Post = ({ post, isDetail = false }: PostProps) => {
               color: "text.primary",
               fontWeight: "medium",
               fontSize: "0.95rem",
+              display: "block",
+              mb: 0.5,
             }}
           >
             {post.title}
           </Typography>
-          <Typography variant="body2" sx={{ mt: 0.5, fontSize: "0.85rem" }}>
+          <Typography
+            variant="body2"
+            sx={{
+              fontSize: "0.85rem",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              display: "-webkit-box",
+              WebkitLineClamp: isDetail ? "unset" : 3,
+              WebkitBoxOrient: "vertical",
+            }}
+          >
             {post.content}
           </Typography>
           {post.imageUrl && (
             <Box sx={{ mt: 1.5, mx: -2 }}>
-              <img src={post.imageUrl || "/placeholder.svg"} alt="Post" style={{ width: "100%", display: "block" }} />
+              <img
+                src={post.imageUrl || "/placeholder.svg"}
+                alt="Post"
+                style={{
+                  width: "100%",
+                  display: "block",
+                  maxHeight: isDetail ? "unset" : "300px",
+                  objectFit: "cover",
+                }}
+              />
             </Box>
           )}
         </CardContent>
@@ -621,41 +650,31 @@ const Post = ({ post, isDetail = false }: PostProps) => {
 
         {/* Post Actions */}
         <CardActions sx={{ px: 2, py: 0.5, justifyContent: "space-between" }}>
-          <IconButton size="small" onClick={handleLike} color={liked ? "error" : "default"}>
+          <IconButton
+            size="small"
+            onClick={handleLike}
+            color={liked ? "error" : "default"}
+            sx={{ borderRadius: 1, px: 1 }}
+          >
             {liked ? <Favorite fontSize="small" /> : <FavoriteBorder fontSize="small" />}
+            <Typography variant="caption" sx={{ ml: 0.5, fontSize: "0.7rem" }}>
+              {likeCount > 0 ? likeCount : ""}
+            </Typography>
           </IconButton>
 
-          <IconButton size="small" onClick={() => setShowComments(!showComments)}>
+          <IconButton size="small" onClick={() => setShowComments(!showComments)} sx={{ borderRadius: 1, px: 1 }}>
             <ChatBubbleOutline fontSize="small" />
+            <Typography variant="caption" sx={{ ml: 0.5, fontSize: "0.7rem" }}>
+              {commentCount > 0 ? commentCount : ""}
+            </Typography>
           </IconButton>
 
-          <IconButton size="small" onClick={handleShareMenuOpen}>
+          <IconButton size="small" onClick={handleShareMenuOpen} sx={{ borderRadius: 1, px: 1 }}>
             <ShareIcon fontSize="small" />
+            <Typography variant="caption" sx={{ ml: 0.5, fontSize: "0.7rem" }}>
+              {shareCount > 0 ? shareCount : ""}
+            </Typography>
           </IconButton>
-
-          {/* Share Menu */}
-          <Menu anchorEl={shareAnchorEl} open={Boolean(shareAnchorEl)} onClose={handleShareMenuClose}>
-            <MenuItem onClick={handleCopyLink}>
-              <ContentCopy fontSize="small" sx={{ mr: 1 }} />
-              Copy Link
-            </MenuItem>
-            <MenuItem onClick={handleOpenShareDialog}>
-              <Repeat fontSize="small" sx={{ mr: 1 }} />
-              Repost
-            </MenuItem>
-            <MenuItem onClick={handleShareMenuClose}>
-              <Twitter fontSize="small" sx={{ mr: 1 }} />
-              Share to Twitter
-            </MenuItem>
-            <MenuItem onClick={handleShareMenuClose}>
-              <Facebook fontSize="small" sx={{ mr: 1 }} />
-              Share to Facebook
-            </MenuItem>
-            <MenuItem onClick={handleShareMenuClose}>
-              <WhatsApp fontSize="small" sx={{ mr: 1 }} />
-              Share via WhatsApp
-            </MenuItem>
-          </Menu>
         </CardActions>
 
         {/* Comments Section */}

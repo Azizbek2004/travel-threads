@@ -27,6 +27,7 @@ import {
   Add as AddIcon,
   Event as EventIcon,
   Search as SearchIcon,
+  ArrowBack,
 } from "@mui/icons-material"
 import { useMobile } from "../../../hooks/use-mobile"
 
@@ -129,6 +130,10 @@ const Header = () => {
               textDecoration: "none",
               color: "inherit",
               fontWeight: "bold",
+              fontSize: "1.1rem",
+              whiteSpace: "nowrap",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
             }}
           >
             Travel Threads
@@ -136,6 +141,16 @@ const Header = () => {
 
           {/* Right side actions */}
           <Box sx={{ display: "flex", alignItems: "center" }}>
+            {isSearchPage ? (
+              <IconButton edge="start" onClick={() => navigate(-1)}>
+                <ArrowBack />
+              </IconButton>
+            ) : (
+              <IconButton color="inherit" component={Link} to="/search" sx={{ mr: 1 }}>
+                <SearchIcon />
+              </IconButton>
+            )}
+
             {currentUser ? (
               <>
                 <IconButton color="inherit" component={Link} to="/messages" sx={{ mr: 1 }}>
