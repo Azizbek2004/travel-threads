@@ -1,9 +1,9 @@
-"use client"
+"use client";
 
-import type React from "react"
+import type React from "react";
 
-import { useState, useEffect, useCallback } from "react"
-import { useLocation, useNavigate, Link } from "react-router-dom"
+import { useState, useEffect, useCallback } from "react";
+import { useLocation, useNavigate, Link } from "react-router-dom";
 import {
   Box,
   Typography,
@@ -29,12 +29,16 @@ import {
   Divider,
   ListItemAvatar,
   Avatar,
-} from "@mui/material"
-import InfiniteScroll from "react-infinite-scroll-component"
-import Post from "../components/Post/Post"
-import UserCard from "../components/User/UserCard"
-import { searchPosts, searchUsers, getLocationSuggestions } from "../services/firestore"
-import debounce from "lodash.debounce"
+} from "@mui/material";
+import InfiniteScroll from "react-infinite-scroll-component";
+import Post from "../components/Post/Post";
+import UserCard from "../components/User/UserCard";
+import {
+  searchPosts,
+  searchUsers,
+  getLocationSuggestions,
+} from "../services/firestore";
+import debounce from "lodash.debounce";
 import {
   Search as SearchIcon,
   LocationOn,
@@ -44,176 +48,223 @@ import {
   Place,
   FilterAlt,
   ArrowBack,
-} from "@mui/icons-material"
-import Map from "../travel/components/Map"
-import { useMobile } from "../hooks/use-mobile"
+} from "@mui/icons-material";
+import Map from "../travel/components/Map";
+import { useMobile } from "../hooks/use-mobile";
 
 const SearchPage = () => {
-  const location = useLocation()
-  const navigate = useNavigate()
-  const { isMobileOrTablet } = useMobile()
-  const queryParams = new URLSearchParams(location.search)
-  const initialTextQuery = queryParams.get("query") || ""
-  const initialLocationQuery = queryParams.get("location") || ""
-  const initialOnlyWithLocation = queryParams.get("withLocation") === "true"
+  const location = useLocation();
+  const navigate = useNavigate();
+  const { isMobileOrTablet } = useMobile();
+  const queryParams = new URLSearchParams(location.search);
+  const initialTextQuery = queryParams.get("query") || "";
+  const initialLocationQuery = queryParams.get("location") || "";
+  const initialOnlyWithLocation = queryParams.get("withLocation") === "true";
 
-  const [textQuery, setTextQuery] = useState(initialTextQuery)
-  const [locationQuery, setLocationQuery] = useState(initialLocationQuery)
-  const [onlyWithLocation, setOnlyWithLocation] = useState(initialOnlyWithLocation)
-  const [tabValue, setTabValue] = useState(0) // 0 for Posts, 1 for Users
-  const [userResults, setUserResults] = useState<any[]>([])
-  const [postResults, setPostResults] = useState<any[]>([])
-  const [hasMoreUsers, setHasMoreUsers] = useState(true)
-  const [hasMorePosts, setHasMorePosts] = useState(true)
-  const [userPage, setUserPage] = useState(0)
-  const [postPage, setPostPage] = useState(0)
-  const [loading, setLoading] = useState(false)
-  const [locationSuggestions, setLocationSuggestions] = useState<string[]>([])
-  const [loadingLocationSuggestions, setLoadingLocationSuggestions] = useState(false)
-  const [showMap, setShowMap] = useState(false)
+  const [textQuery, setTextQuery] = useState(initialTextQuery);
+  const [locationQuery, setLocationQuery] = useState(initialLocationQuery);
+  const [onlyWithLocation, setOnlyWithLocation] = useState(
+    initialOnlyWithLocation
+  );
+  const [tabValue, setTabValue] = useState(0); // 0 for Posts, 1 for Users
+  const [userResults, setUserResults] = useState<any[]>([]);
+  const [postResults, setPostResults] = useState<any[]>([]);
+  const [hasMoreUsers, setHasMoreUsers] = useState(true);
+  const [hasMorePosts, setHasMorePosts] = useState(true);
+  const [userPage, setUserPage] = useState(0);
+  const [postPage, setPostPage] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const [locationSuggestions, setLocationSuggestions] = useState<string[]>([]);
+  const [loadingLocationSuggestions, setLoadingLocationSuggestions] =
+    useState(false);
+  const [showMap, setShowMap] = useState(false);
   const [mapCenter, setMapCenter] = useState<{
-    lat: number
-    lng: number
-  } | null>(null)
-  const [showFilters, setShowFilters] = useState(false)
-  const [filterDrawerOpen, setFilterDrawerOpen] = useState(false)
+    lat: number;
+    lng: number;
+  } | null>(null);
+  const [showFilters, setShowFilters] = useState(false);
+  const [filterDrawerOpen, setFilterDrawerOpen] = useState(false);
+  const [filteredPosts, setFilteredPosts] = useState<any[]>([]);
+  const [locationFilter, setLocationFilter] = useState<string | null>(null);
 
-  const PAGE_SIZE = 10 // Number of items to load per page
+  const PAGE_SIZE = 10; // Number of items to load per page
+
+  // Add this function to normalize location names for comparison
+  const normalizeLocationName = (name: string): string => {
+    return name.toLowerCase().replace(/\s+/g, " ").trim();
+  };
+
+  // Update the location filter function
+  const handleLocationFilter = (query: string) => {
+    setLocationFilter(query || null);
+
+    if (!query) {
+      setFilteredPosts(postResults);
+      return;
+    }
+
+    const normalizedQuery = normalizeLocationName(query);
+    const filtered = postResults.filter((post) => {
+      if (!post.location?.name) return false;
+      const normalizedLocationName = normalizeLocationName(post.location.name);
+      return normalizedLocationName.includes(normalizedQuery);
+    });
+
+    setFilteredPosts(filtered);
+  };
 
   // Search for users (paginated)
   const fetchUsers = async (query: string, page: number) => {
-    const allUsers = await searchUsers(query)
-    const start = page * PAGE_SIZE
-    const end = start + PAGE_SIZE
-    const paginatedUsers = allUsers.slice(start, end)
-    setUserResults((prev) => (page === 0 ? paginatedUsers : [...prev, ...paginatedUsers]))
-    setHasMoreUsers(paginatedUsers.length === PAGE_SIZE)
-  }
+    const allUsers = await searchUsers(query);
+    const start = page * PAGE_SIZE;
+    const end = start + PAGE_SIZE;
+    const paginatedUsers = allUsers.slice(start, end);
+    setUserResults((prev) =>
+      page === 0 ? paginatedUsers : [...prev, ...paginatedUsers]
+    );
+    setHasMoreUsers(paginatedUsers.length === PAGE_SIZE);
+  };
 
   // Search for posts with text and location filters
-  const fetchPosts = async (textQuery: string, locationQuery: string, onlyWithLocation: boolean, page: number) => {
-    const allPosts = await searchPosts(textQuery, locationQuery, onlyWithLocation)
-    const start = page * PAGE_SIZE
-    const end = start + PAGE_SIZE
-    const paginatedPosts = allPosts.slice(start, end)
-    setPostResults((prev) => (page === 0 ? paginatedPosts : [...prev, ...paginatedPosts]))
-    setHasMorePosts(paginatedPosts.length === PAGE_SIZE)
+  const fetchPosts = async (
+    textQuery: string,
+    locationQuery: string,
+    onlyWithLocation: boolean,
+    page: number
+  ) => {
+    const allPosts = await searchPosts(
+      textQuery,
+      locationQuery,
+      onlyWithLocation
+    );
+    const start = page * PAGE_SIZE;
+    const end = start + PAGE_SIZE;
+    const paginatedPosts = allPosts.slice(start, end);
+    setPostResults((prev) =>
+      page === 0 ? paginatedPosts : [...prev, ...paginatedPosts]
+    );
+    setHasMorePosts(paginatedPosts.length === PAGE_SIZE);
+    setFilteredPosts(paginatedPosts);
 
     // Update map center if there are posts with location
-    if (paginatedPosts.length > 0 && paginatedPosts[0].location?.lat && paginatedPosts[0].location?.lng) {
+    if (
+      paginatedPosts.length > 0 &&
+      paginatedPosts[0].location?.lat &&
+      paginatedPosts[0].location?.lng
+    ) {
       setMapCenter({
         lat: paginatedPosts[0].location.lat,
         lng: paginatedPosts[0].location.lng,
-      })
+      });
     }
-  }
+  };
 
   // Handle search based on all current filters
   const handleSearch = async () => {
-    if (!textQuery.trim() && !locationQuery.trim() && !onlyWithLocation) return
+    if (!textQuery.trim() && !locationQuery.trim() && !onlyWithLocation) return;
 
-    setLoading(true)
-    setUserResults([])
-    setPostResults([])
-    setUserPage(0)
-    setPostPage(0)
-    setHasMoreUsers(true)
-    setHasMorePosts(true)
+    setLoading(true);
+    setUserResults([]);
+    setPostResults([]);
+    setUserPage(0);
+    setPostPage(0);
+    setHasMoreUsers(true);
+    setHasMorePosts(true);
 
     try {
       // Update URL with search params
-      const params = new URLSearchParams()
-      if (textQuery) params.set("query", textQuery)
-      if (locationQuery) params.set("location", locationQuery)
+      const params = new URLSearchParams();
+      if (textQuery) params.set("query", textQuery);
+      if (locationQuery) params.set("location", locationQuery);
 
-      if (onlyWithLocation) params.set("withLocation", "true")
-      navigate(`/search?${params.toString()}`)
+      if (onlyWithLocation) params.set("withLocation", "true");
+      navigate(`/search?${params.toString()}`);
 
-      await fetchUsers(textQuery, 0)
-      await fetchPosts(textQuery, locationQuery, onlyWithLocation, 0)
+      await fetchUsers(textQuery, 0);
+      await fetchPosts(textQuery, locationQuery, onlyWithLocation, 0);
     } catch (error) {
-      console.error("Search error:", error)
+      console.error("Search error:", error);
     } finally {
-      setLoading(false)
-      setFilterDrawerOpen(false)
+      setLoading(false);
+      setFilterDrawerOpen(false);
     }
-  }
+  };
 
   const loadMoreUsers = () => {
     if (hasMoreUsers) {
-      setUserPage((prev) => prev + 1)
-      fetchUsers(textQuery, userPage + 1)
+      setUserPage((prev) => prev + 1);
+      fetchUsers(textQuery, userPage + 1);
     }
-  }
+  };
 
   const loadMorePosts = () => {
     if (hasMorePosts) {
-      setPostPage((prev) => prev + 1)
-      fetchPosts(textQuery, locationQuery, onlyWithLocation, postPage + 1)
+      setPostPage((prev) => prev + 1);
+      fetchPosts(textQuery, locationQuery, onlyWithLocation, postPage + 1);
     }
-  }
+  };
 
   // Fetch location suggestions with debounce
   const debouncedGetLocationSuggestions = useCallback(
     debounce(async (input: string) => {
       if (input.length < 2) {
-        setLocationSuggestions([])
-        setLoadingLocationSuggestions(false)
-        return
+        setLocationSuggestions([]);
+        setLoadingLocationSuggestions(false);
+        return;
       }
 
       try {
-        const suggestions = await getLocationSuggestions(input)
-        setLocationSuggestions(suggestions)
+        const suggestions = await getLocationSuggestions(input);
+        setLocationSuggestions(suggestions);
       } catch (error) {
-        console.error("Error getting location suggestions:", error)
+        console.error("Error getting location suggestions:", error);
       } finally {
-        setLoadingLocationSuggestions(false)
+        setLoadingLocationSuggestions(false);
       }
     }, 500),
-    [],
-  )
+    []
+  );
 
   // Update location suggestions when typing
   useEffect(() => {
     if (locationQuery.trim()) {
-      setLoadingLocationSuggestions(true)
-      debouncedGetLocationSuggestions(locationQuery)
+      setLoadingLocationSuggestions(true);
+      debouncedGetLocationSuggestions(locationQuery);
     } else {
-      setLocationSuggestions([])
+      setLocationSuggestions([]);
     }
-  }, [locationQuery, debouncedGetLocationSuggestions])
+  }, [locationQuery, debouncedGetLocationSuggestions]);
 
   // Debounced search function
   const debouncedSearch = useCallback(
     debounce(() => {
-      handleSearch()
+      handleSearch();
     }, 800),
-    [textQuery, locationQuery, onlyWithLocation],
-  )
+    [textQuery, locationQuery, onlyWithLocation]
+  );
 
   // Initial search when page loads with URL parameters
   useEffect(() => {
     if (initialTextQuery || initialLocationQuery || initialOnlyWithLocation) {
-      handleSearch()
+      handleSearch();
     }
-  }, []) // Empty dependency array for initial load only
+  }, []); // Empty dependency array for initial load only
 
   // Run search when filters change
   useEffect(() => {
-    debouncedSearch()
-  }, [textQuery, locationQuery, onlyWithLocation, debouncedSearch])
+    debouncedSearch();
+  }, [textQuery, locationQuery, onlyWithLocation, debouncedSearch]);
 
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
-    setTabValue(newValue)
-  }
+    setTabValue(newValue);
+  };
 
   const handleClearFilters = () => {
-    setTextQuery("")
-    setLocationQuery("")
-    setOnlyWithLocation(false)
-    setShowFilters(false)
-  }
+    setTextQuery("");
+    setLocationQuery("");
+    setOnlyWithLocation(false);
+    setShowFilters(false);
+  };
 
   // Mobile search page
   if (isMobileOrTablet) {
@@ -251,7 +302,11 @@ const SearchPage = () => {
                 ),
                 endAdornment: textQuery ? (
                   <InputAdornment position="end">
-                    <IconButton edge="end" onClick={() => setTextQuery("")} size="small">
+                    <IconButton
+                      edge="end"
+                      onClick={() => setTextQuery("")}
+                      size="small"
+                    >
                       <Close fontSize="small" />
                     </IconButton>
                   </InputAdornment>
@@ -315,7 +370,9 @@ const SearchPage = () => {
               <Map
                 lat={mapCenter.lat}
                 lng={mapCenter.lng}
-                posts={postResults.filter((post) => post.location?.lat && post.location?.lng)}
+                posts={postResults.filter(
+                  (post) => post.location?.lat && post.location?.lng
+                )}
               />
             ) : (
               <Box
@@ -326,7 +383,9 @@ const SearchPage = () => {
                   height: "100%",
                 }}
               >
-                <Typography color="text.secondary">No locations to display</Typography>
+                <Typography color="text.secondary">
+                  No locations to display
+                </Typography>
               </Box>
             )}
           </Box>
@@ -348,13 +407,21 @@ const SearchPage = () => {
                   </Typography>
                 ) : (
                   <InfiniteScroll
-                    dataLength={postResults.length}
+                    dataLength={filteredPosts.length}
                     next={loadMorePosts}
                     hasMore={hasMorePosts}
-                    loader={<CircularProgress sx={{ display: "block", mx: "auto", my: 2 }} />}
-                    endMessage={<Typography sx={{ textAlign: "center", mt: 2, mb: 8 }}>No more posts</Typography>}
+                    loader={
+                      <CircularProgress
+                        sx={{ display: "block", mx: "auto", my: 2 }}
+                      />
+                    }
+                    endMessage={
+                      <Typography sx={{ textAlign: "center", mt: 2, mb: 8 }}>
+                        No more posts
+                      </Typography>
+                    }
                   >
-                    {postResults.map((post) => (
+                    {filteredPosts.map((post) => (
                       <Post key={post.id} post={post} />
                     ))}
                   </InfiniteScroll>
@@ -390,7 +457,10 @@ const SearchPage = () => {
                         <ListItemText
                           primary={user.displayName}
                           secondary={
-                            user.bio ? user.bio.substring(0, 60) + (user.bio.length > 60 ? "..." : "") : "No bio"
+                            user.bio
+                              ? user.bio.substring(0, 60) +
+                                (user.bio.length > 60 ? "..." : "")
+                              : "No bio"
                           }
                         />
                       </ListItem>
@@ -439,7 +509,10 @@ const SearchPage = () => {
             <TextField
               placeholder="Enter location (e.g., France, Paris)"
               value={locationQuery}
-              onChange={(e) => setLocationQuery(e.target.value)}
+              onChange={(e) => {
+                setLocationQuery(e.target.value);
+                handleLocationFilter(e.target.value);
+              }}
               fullWidth
               margin="normal"
               variant="outlined"
@@ -453,13 +526,23 @@ const SearchPage = () => {
             />
 
             <FormControlLabel
-              control={<Switch checked={onlyWithLocation} onChange={(e) => setOnlyWithLocation(e.target.checked)} />}
+              control={
+                <Switch
+                  checked={onlyWithLocation}
+                  onChange={(e) => setOnlyWithLocation(e.target.checked)}
+                />
+              }
               label="Only show posts with location"
               sx={{ my: 1, display: "block" }}
             />
 
             <FormControlLabel
-              control={<Switch checked={showMap} onChange={(e) => setShowMap(e.target.checked)} />}
+              control={
+                <Switch
+                  checked={showMap}
+                  onChange={(e) => setShowMap(e.target.checked)}
+                />
+              }
               label="Show map view"
               sx={{ mb: 2, display: "block" }}
             />
@@ -475,7 +558,7 @@ const SearchPage = () => {
           </Box>
         </Drawer>
       </Box>
-    )
+    );
   }
 
   // Desktop search page
@@ -514,7 +597,11 @@ const SearchPage = () => {
             <IconButton
               sx={{ ml: 1 }}
               onClick={() => setShowFilters(!showFilters)}
-              color={showFilters || locationQuery || onlyWithLocation ? "primary" : "default"}
+              color={
+                showFilters || locationQuery || onlyWithLocation
+                  ? "primary"
+                  : "default"
+              }
             >
               <FilterList />
             </IconButton>
@@ -522,7 +609,9 @@ const SearchPage = () => {
 
           {/* Advanced Filters */}
           {showFilters && (
-            <Box sx={{ mb: 2, p: 2, bgcolor: "background.paper", borderRadius: 1 }}>
+            <Box
+              sx={{ mb: 2, p: 2, bgcolor: "background.paper", borderRadius: 1 }}
+            >
               <Typography variant="subtitle2" gutterBottom>
                 Advanced Filters
               </Typography>
@@ -532,7 +621,10 @@ const SearchPage = () => {
                 options={locationSuggestions}
                 loading={loadingLocationSuggestions}
                 value={locationQuery}
-                onInputChange={(_, newValue) => setLocationQuery(newValue)}
+                onInputChange={(_, newValue) => {
+                  setLocationQuery(newValue);
+                  handleLocationFilter(newValue);
+                }}
                 renderInput={(params) => (
                   <TextField
                     {...params}
@@ -549,7 +641,9 @@ const SearchPage = () => {
                       ),
                       endAdornment: (
                         <>
-                          {loadingLocationSuggestions ? <CircularProgress color="inherit" size={20} /> : null}
+                          {loadingLocationSuggestions ? (
+                            <CircularProgress color="inherit" size={20} />
+                          ) : null}
                           {params.InputProps.endAdornment}
                         </>
                       ),
@@ -568,7 +662,10 @@ const SearchPage = () => {
               >
                 <FormControlLabel
                   control={
-                    <Switch checked={onlyWithLocation} onChange={(e) => setOnlyWithLocation(e.target.checked)} />
+                    <Switch
+                      checked={onlyWithLocation}
+                      onChange={(e) => setOnlyWithLocation(e.target.checked)}
+                    />
                   }
                   label="Only posts with location"
                 />
@@ -585,7 +682,11 @@ const SearchPage = () => {
               </Box>
 
               <Box sx={{ display: "flex", justifyContent: "flex-end", mt: 2 }}>
-                <Button variant="text" onClick={handleClearFilters} sx={{ mr: 1 }}>
+                <Button
+                  variant="text"
+                  onClick={handleClearFilters}
+                  sx={{ mr: 1 }}
+                >
                   Clear Filters
                 </Button>
                 <Button variant="contained" onClick={handleSearch}>
@@ -598,7 +699,13 @@ const SearchPage = () => {
           {/* Active filters display */}
           {(textQuery || locationQuery || onlyWithLocation) && (
             <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
-              {textQuery && <Chip label={`Search: ${textQuery}`} onDelete={() => setTextQuery("")} size="small" />}
+              {textQuery && (
+                <Chip
+                  label={`Search: ${textQuery}`}
+                  onDelete={() => setTextQuery("")}
+                  size="small"
+                />
+              )}
               {locationQuery && (
                 <Chip
                   icon={<LocationOn fontSize="small" />}
@@ -608,7 +715,11 @@ const SearchPage = () => {
                 />
               )}
               {onlyWithLocation && (
-                <Chip label="With location only" onDelete={() => setOnlyWithLocation(false)} size="small" />
+                <Chip
+                  label="With location only"
+                  onDelete={() => setOnlyWithLocation(false)}
+                  size="small"
+                />
               )}
             </Box>
           )}
@@ -622,7 +733,9 @@ const SearchPage = () => {
             <Map
               lat={mapCenter.lat}
               lng={mapCenter.lng}
-              posts={postResults.filter((post) => post.location?.lat && post.location?.lng)}
+              posts={postResults.filter(
+                (post) => post.location?.lat && post.location?.lng
+              )}
             />
           ) : (
             <Box
@@ -633,7 +746,9 @@ const SearchPage = () => {
                 height: "100%",
               }}
             >
-              <Typography color="text.secondary">No locations to display</Typography>
+              <Typography color="text.secondary">
+                No locations to display
+              </Typography>
             </Box>
           )}
         </Paper>
@@ -661,13 +776,21 @@ const SearchPage = () => {
                 </Typography>
               ) : (
                 <InfiniteScroll
-                  dataLength={postResults.length}
+                  dataLength={filteredPosts.length}
                   next={loadMorePosts}
                   hasMore={hasMorePosts}
-                  loader={<CircularProgress sx={{ display: "block", mx: "auto", my: 2 }} />}
-                  endMessage={<Typography sx={{ textAlign: "center", mt: 2 }}>No more posts</Typography>}
+                  loader={
+                    <CircularProgress
+                      sx={{ display: "block", mx: "auto", my: 2 }}
+                    />
+                  }
+                  endMessage={
+                    <Typography sx={{ textAlign: "center", mt: 2 }}>
+                      No more posts
+                    </Typography>
+                  }
                 >
-                  {postResults.map((post) => (
+                  {filteredPosts.map((post) => (
                     <Post key={post.id} post={post} />
                   ))}
                 </InfiniteScroll>
@@ -687,8 +810,16 @@ const SearchPage = () => {
                   dataLength={userResults.length}
                   next={loadMoreUsers}
                   hasMore={hasMoreUsers}
-                  loader={<CircularProgress sx={{ display: "block", mx: "auto", my: 2 }} />}
-                  endMessage={<Typography sx={{ textAlign: "center", mt: 2 }}>No more users</Typography>}
+                  loader={
+                    <CircularProgress
+                      sx={{ display: "block", mx: "auto", my: 2 }}
+                    />
+                  }
+                  endMessage={
+                    <Typography sx={{ textAlign: "center", mt: 2 }}>
+                      No more users
+                    </Typography>
+                  }
                 >
                   <Grid container spacing={2}>
                     {userResults.map((user) => (
@@ -704,7 +835,7 @@ const SearchPage = () => {
         </>
       )}
     </Box>
-  )
-}
+  );
+};
 
-export default SearchPage
+export default SearchPage;

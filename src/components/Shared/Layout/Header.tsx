@@ -1,11 +1,10 @@
-"use client"
+"use client";
 
-import type React from "react"
-import { useState, useEffect } from "react"
+import type React from "react";
+import { useState, useEffect } from "react";
 import {
   AppBar,
   Toolbar,
-  Typography,
   Button,
   TextField,
   IconButton,
@@ -16,114 +15,111 @@ import {
   Box,
   InputAdornment,
   Tooltip,
-} from "@mui/material"
-import { Link, useNavigate, useLocation } from "react-router-dom"
-import { useAuth } from "../../../hooks/useAuth"
-import { logOut } from "../../../services/auth"
+  Chip,
+} from "@mui/material";
+import { Link, useNavigate, useLocation } from "react-router-dom";
+import { useAuth } from "../../../hooks/useAuth";
+import { logOut } from "../../../services/auth";
+import Logo from "./Logo";
 import {
   Message,
-  Notifications,
   Menu as MenuIcon,
   Add as AddIcon,
   Event as EventIcon,
   Search as SearchIcon,
   ArrowBack,
-  FlightTakeoff,
-} from "@mui/icons-material"
-import { useMobile } from "../../../hooks/use-mobile"
+} from "@mui/icons-material";
+import { useMobile } from "../../../hooks/use-mobile";
+import NotificationBell from "../Notifications/NotificationBell";
 
 const Header = () => {
-  const { currentUser } = useAuth()
-  const navigate = useNavigate()
-  const location = useLocation()
-  const [searchQuery, setSearchQuery] = useState("")
-  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null)
-  const [mobileMenuAnchorEl, setMobileMenuAnchorEl] = useState<null | HTMLElement>(null)
-  const [createMenuAnchorEl, setCreateMenuAnchorEl] = useState<null | HTMLElement>(null)
-  const isSearchPage = location.pathname.startsWith("/search")
-  const { isMobileOrTablet } = useMobile()
-  const [isMobileView, setIsMobileView] = useState(isMobileOrTablet)
+  const { currentUser } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [searchQuery, setSearchQuery] = useState("");
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const [mobileMenuAnchorEl, setMobileMenuAnchorEl] =
+    useState<null | HTMLElement>(null);
+  const [createMenuAnchorEl, setCreateMenuAnchorEl] =
+    useState<null | HTMLElement>(null);
+  const isSearchPage = location.pathname.startsWith("/search");
+  const { isMobileOrTablet } = useMobile();
+  const [isMobileView, setIsMobileView] = useState(isMobileOrTablet);
+  const [recentSearches, setRecentSearches] = useState<string[]>([]);
 
   // Update mobile view state when isMobileOrTablet changes
   useEffect(() => {
-    setIsMobileView(isMobileOrTablet)
-  }, [isMobileOrTablet])
+    setIsMobileView(isMobileOrTablet);
+  }, [isMobileOrTablet]);
 
   const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault()
+    e.preventDefault();
     if (searchQuery.trim()) {
-      navigate(`/search?query=${encodeURIComponent(searchQuery)}`)
-      setSearchQuery("")
+      // Add to recent searches
+      if (!recentSearches.includes(searchQuery)) {
+        const updatedSearches = [searchQuery, ...recentSearches.slice(0, 4)];
+        setRecentSearches(updatedSearches);
+        // Could save to localStorage here
+        localStorage.setItem("recentSearches", JSON.stringify(updatedSearches));
+      }
+
+      navigate(`/search?query=${encodeURIComponent(searchQuery)}`);
+      setSearchQuery("");
     }
-  }
+  };
+
+  // Add useEffect to load recent searches from localStorage
+  useEffect(() => {
+    const savedSearches = localStorage.getItem("recentSearches");
+    if (savedSearches) {
+      try {
+        setRecentSearches(JSON.parse(savedSearches));
+      } catch (e) {
+        console.error("Error parsing recent searches:", e);
+      }
+    }
+  }, []);
 
   const handleProfileMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
-    setAnchorEl(event.currentTarget)
-  }
+    setAnchorEl(event.currentTarget);
+  };
 
   const handleMobileMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
-    setMobileMenuAnchorEl(event.currentTarget)
-  }
+    setMobileMenuAnchorEl(event.currentTarget);
+  };
 
   const handleCreateMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
-    setCreateMenuAnchorEl(event.currentTarget)
-  }
+    setCreateMenuAnchorEl(event.currentTarget);
+  };
 
   const handleMenuClose = () => {
-    setAnchorEl(null)
-    setMobileMenuAnchorEl(null)
-    setCreateMenuAnchorEl(null)
-  }
+    setAnchorEl(null);
+    setMobileMenuAnchorEl(null);
+    setCreateMenuAnchorEl(null);
+  };
 
   const handleLogout = () => {
-    logOut()
-    handleMenuClose()
-  }
+    logOut();
+    handleMenuClose();
+  };
 
   const handleCreatePost = () => {
     if (currentUser) {
-      navigate("/create-post")
+      navigate("/create-post");
     } else {
-      navigate("/login", { state: { from: "/create-post" } })
+      navigate("/login", { state: { from: "/create-post" } });
     }
-    handleMenuClose()
-  }
+    handleMenuClose();
+  };
 
   const handleCreateEvent = () => {
     if (currentUser) {
-      navigate("/create-event")
+      navigate("/create-event");
     } else {
-      navigate("/login", { state: { from: "/create-event" } })
+      navigate("/login", { state: { from: "/create-event" } });
     }
-    handleMenuClose()
-  }
-
-  const Logo = () => (
-    <Box
-      component={Link}
-      to="/"
-      sx={{
-        display: "flex",
-        alignItems: "center",
-        textDecoration: "none",
-        color: "inherit",
-      }}
-    >
-      <img src="/logo.svg" alt="" height="36px" style={{ marginRight: '12px' }} />
-      <Typography
-        variant="h6"
-        sx={{
-          fontWeight: "bold",
-          fontSize: isMobileView ? "1.1rem" : "1.2rem",
-          whiteSpace: "nowrap",
-          overflow: "hidden",
-          textOverflow: "ellipsis",
-        }}
-      >
-        Beyond Borders
-      </Typography>
-    </Box>
-  )
+    handleMenuClose();
+  };
 
   if (isMobileView) {
     return (
@@ -134,7 +130,6 @@ const Header = () => {
         sx={{
           borderBottom: 1,
           borderColor: "divider",
-          width: "100%",
           maxWidth: "100vw",
           overflow: "hidden",
         }}
@@ -145,11 +140,10 @@ const Header = () => {
             height: 56,
             minHeight: 56,
             px: 2,
-            width: "100%",
             maxWidth: "100%",
           }}
         >
-          <Logo />
+          <Logo isMobileOrTablet={true} asLink={true} />
 
           {/* Right side actions */}
           <Box sx={{ display: "flex", alignItems: "center" }}>
@@ -158,42 +152,77 @@ const Header = () => {
                 <ArrowBack />
               </IconButton>
             ) : (
-              <IconButton color="inherit" component={Link} to="/search" sx={{ mr: 1 }}>
-                <SearchIcon />
-              </IconButton>
+              <></>
             )}
 
             {currentUser ? (
               <>
-                <IconButton color="inherit" component={Link} to="/messages" sx={{ mr: 1 }}>
-                  <Badge badgeContent={0} color="error">
-                    <Message />
-                  </Badge>
-                </IconButton>
+                <NotificationBell />
 
                 <IconButton onClick={handleMobileMenuOpen}>
                   <MenuIcon />
                 </IconButton>
 
-                <Menu anchorEl={mobileMenuAnchorEl} open={Boolean(mobileMenuAnchorEl)} onClose={handleMenuClose}>
-                  <MenuItem component={Link} to={`/profile/${currentUser.uid}`} onClick={handleMenuClose}>
+                <Menu
+                  anchorEl={mobileMenuAnchorEl}
+                  open={Boolean(mobileMenuAnchorEl)}
+                  onClose={handleMenuClose}
+                >
+                  <MenuItem
+                    component={Link}
+                    to={`/profile/${currentUser.uid}`}
+                    onClick={handleMenuClose}
+                  >
                     Profile
                   </MenuItem>
-                  <MenuItem component={Link} to="/events" onClick={handleMenuClose}>
+                  <MenuItem
+                    component={Link}
+                    to="/events"
+                    onClick={handleMenuClose}
+                  >
                     Events
                   </MenuItem>
+                  <MenuItem
+                    component={Link}
+                    to="/messages"
+                    onClick={handleMenuClose}
+                  >
+                    Messages
+                  </MenuItem>
+                  <MenuItem
+                    component={Link}
+                    to="/search"
+                    onClick={handleMenuClose}
+                  >
+                    Search
+                  </MenuItem>
+                  {currentUser.isAdmin && (
+                    <MenuItem
+                      component={Link}
+                      to="/admin"
+                      onClick={handleMenuClose}
+                    >
+                      Admin Panel
+                    </MenuItem>
+                  )}
                   <MenuItem onClick={handleLogout}>Logout</MenuItem>
                 </Menu>
               </>
             ) : (
-              <Button color="primary" variant="contained" size="small" component={Link} to="/login">
+              <Button
+                color="primary"
+                variant="contained"
+                size="small"
+                component={Link}
+                to="/login"
+              >
                 Login
               </Button>
             )}
           </Box>
         </Toolbar>
       </AppBar>
-    )
+    );
   }
 
   // Desktop header
@@ -209,8 +238,8 @@ const Header = () => {
         overflow: "hidden",
       }}
     >
-      <Toolbar sx={{ width: "100%", px: 2 }}>
-        <Logo />
+      <Toolbar sx={{ px: 2 }}>
+        <Logo isMobileOrTablet={false} asLink={true} />
 
         <Box sx={{ flexGrow: 1, display: "flex", justifyContent: "center" }}>
           {!isSearchPage && (
@@ -234,6 +263,46 @@ const Header = () => {
                   ),
                 }}
               />
+
+              {/* Recent searches */}
+              {recentSearches.length > 0 && searchQuery === "" && (
+                <Box
+                  sx={{
+                    position: "absolute",
+                    zIndex: 1000,
+                    width: 300,
+                    mt: 0.5,
+                    p: 1,
+                    bgcolor: "background.paper",
+                    borderRadius: 1,
+                    boxShadow: 3,
+                    display: "flex",
+                    flexWrap: "wrap",
+                    gap: 0.5,
+                  }}
+                >
+                  {recentSearches.map((search, index) => (
+                    <Chip
+                      key={index}
+                      label={search}
+                      size="small"
+                      onClick={() => {
+                        navigate(`/search?query=${encodeURIComponent(search)}`);
+                      }}
+                      onDelete={() => {
+                        const updatedSearches = recentSearches.filter(
+                          (s) => s !== search
+                        );
+                        setRecentSearches(updatedSearches);
+                        localStorage.setItem(
+                          "recentSearches",
+                          JSON.stringify(updatedSearches)
+                        );
+                      }}
+                    />
+                  ))}
+                </Box>
+              )}
             </form>
           )}
         </Box>
@@ -241,7 +310,11 @@ const Header = () => {
         <Box sx={{ display: "flex", alignItems: "center" }}>
           {currentUser && (
             <Tooltip title="Create">
-              <IconButton color="inherit" onClick={handleCreateMenuOpen} sx={{ mr: 1 }}>
+              <IconButton
+                color="inherit"
+                onClick={handleCreateMenuOpen}
+                sx={{ mr: 1 }}
+              >
                 <AddIcon />
               </IconButton>
             </Tooltip>
@@ -261,7 +334,10 @@ const Header = () => {
             }}
           >
             <MenuItem onClick={handleCreatePost}>
-              <span className="material-icons-outlined" style={{ marginRight: 8 }}>
+              <span
+                className="material-icons-outlined"
+                style={{ marginRight: 8 }}
+              >
                 post_add
               </span>
               Create Post
@@ -284,13 +360,13 @@ const Header = () => {
                 </Badge>
               </IconButton>
 
-              <IconButton color="inherit">
-                <Badge badgeContent={0} color="error">
-                  <Notifications />
-                </Badge>
-              </IconButton>
+              <NotificationBell />
 
-              <IconButton color="inherit" onClick={handleProfileMenuOpen} sx={{ ml: 1 }}>
+              <IconButton
+                color="inherit"
+                onClick={handleProfileMenuOpen}
+                sx={{ ml: 1 }}
+              >
                 <Avatar
                   src={currentUser.photoURL || undefined}
                   alt={currentUser.displayName || "User"}
@@ -298,10 +374,27 @@ const Header = () => {
                 />
               </IconButton>
 
-              <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={handleMenuClose}>
-                <MenuItem component={Link} to={`/profile/${currentUser.uid}`} onClick={handleMenuClose}>
+              <Menu
+                anchorEl={anchorEl}
+                open={Boolean(anchorEl)}
+                onClose={handleMenuClose}
+              >
+                <MenuItem
+                  component={Link}
+                  to={`/profile/${currentUser.uid}`}
+                  onClick={handleMenuClose}
+                >
                   Profile
                 </MenuItem>
+                {currentUser.isAdmin && (
+                  <MenuItem
+                    component={Link}
+                    to="/admin"
+                    onClick={handleMenuClose}
+                  >
+                    Admin Panel
+                  </MenuItem>
+                )}
                 <MenuItem onClick={handleLogout}>Logout</MenuItem>
               </Menu>
             </>
@@ -318,7 +411,7 @@ const Header = () => {
         </Box>
       </Toolbar>
     </AppBar>
-  )
-}
+  );
+};
 
-export default Header
+export default Header;

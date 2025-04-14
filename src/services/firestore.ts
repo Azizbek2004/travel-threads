@@ -23,6 +23,9 @@ import {
 import type { Post, Comment, Share } from "../types/post";
 import type { UserProfile, Conversation, Message } from "../types/user";
 
+// Import the createNotification function
+import { createNotification } from "./notifications";
+
 // Post-related functions
 const postsCollection = collection(db, "posts");
 const commentsCollection = collection(db, "comments");
@@ -155,10 +158,35 @@ export const likePost = async (
 ): Promise<void> => {
   const postRef = doc(db, "posts", postId);
 
-  await updateDoc(postRef, {
-    likes: increment(1),
-    likedBy: arrayUnion(userId),
-  });
+  // First check if user already liked the post
+  const postSnap = await getDoc(postRef);
+  if (!postSnap.exists()) return;
+
+  const postData = postSnap.data();
+  const likedBy = postData.likedBy || [];
+
+  // Only update if user hasn't already liked
+  if (!likedBy.includes(userId)) {
+    await updateDoc(postRef, {
+      likes: increment(1),
+      likedBy: arrayUnion(userId),
+    });
+
+    // Create notification for post author
+    if (postData.authorId && postData.authorId !== userId) {
+      await createNotification({
+        userId: postData.authorId,
+        type: "post_like",
+        message: `Someone liked your post "${postData.title}"`,
+        actorId: userId,
+        entityId: postId,
+        entityType: "post",
+        data: {
+          preview: postData.title,
+        },
+      });
+    }
+  }
 };
 
 export const unlikePost = async (
@@ -167,10 +195,20 @@ export const unlikePost = async (
 ): Promise<void> => {
   const postRef = doc(db, "posts", postId);
 
-  await updateDoc(postRef, {
-    likes: increment(-1),
-    likedBy: arrayRemove(userId),
-  });
+  // First check if user already liked the post
+  const postSnap = await getDoc(postRef);
+  if (!postSnap.exists()) return;
+
+  const postData = postSnap.data();
+  const likedBy = postData.likedBy || [];
+
+  // Only update if user has already liked
+  if (likedBy.includes(userId)) {
+    await updateDoc(postRef, {
+      likes: increment(-1),
+      likedBy: arrayRemove(userId),
+    });
+  }
 };
 
 // Comment functions
@@ -189,6 +227,55 @@ export const addComment = async (
   await updateDoc(postRef, {
     commentCount: increment(1),
   });
+
+  // Get post data to create notification
+  const postSnap = await getDoc(postRef);
+  if (postSnap.exists()) {
+    const postData = postSnap.data();
+
+    // Create notification for post author if the commenter is not the author
+    if (postData.authorId && postData.authorId !== comment.authorId) {
+      await createNotification({
+        userId: postData.authorId,
+        type: "post_comment",
+        message: `Someone commented on your post "${postData.title}"`,
+        actorId: comment.authorId,
+        entityId: comment.postId,
+        entityType: "post",
+        data: {
+          preview: comment.content?.substring(0, 100),
+        },
+      });
+    }
+
+    // If this is a reply to another comment, notify that comment's author
+    if (comment.parentId) {
+      const parentCommentRef = doc(db, "comments", comment.parentId);
+      const parentCommentSnap = await getDoc(parentCommentRef);
+
+      if (parentCommentSnap.exists()) {
+        const parentCommentData = parentCommentSnap.data();
+
+        // Only notify if the reply author is different from the parent comment author
+        if (
+          parentCommentData.authorId &&
+          parentCommentData.authorId !== comment.authorId
+        ) {
+          await createNotification({
+            userId: parentCommentData.authorId,
+            type: "comment_reply",
+            message: "Someone replied to your comment",
+            actorId: comment.authorId,
+            entityId: comment.postId,
+            entityType: "post",
+            data: {
+              preview: comment.content?.substring(0, 100),
+            },
+          });
+        }
+      }
+    }
+  }
 
   return docRef.id;
 };
@@ -330,6 +417,16 @@ export const followUser = async (
       }
 
       await batch.commit();
+
+      // Create notification for the target user
+      await createNotification({
+        userId: targetUserId,
+        type: "new_follower",
+        message: "Someone started following you",
+        actorId: currentUserId,
+        entityId: currentUserId,
+        entityType: "user",
+      });
     }
   } catch (error) {
     console.error("Error following user:", error);
@@ -529,6 +626,32 @@ export const sendMessage = async (
 
   // Update conversation with last message
   const conversationRef = doc(db, "conversations", conversationId);
+  const conversationSnap = await getDoc(conversationRef);
+
+  if (conversationSnap.exists()) {
+    const conversationData = conversationSnap.data();
+    const participants = conversationData.participants || [];
+
+    // Find the recipient (the other participant)
+    const recipientId = participants.find((id: string) => id !== senderId);
+
+    if (recipientId) {
+      // Create notification for the recipient
+      await createNotification({
+        userId: recipientId,
+        type: "message_received",
+        message: "You received a new message",
+        actorId: senderId,
+        entityId: recipientId, // We use the recipient ID to navigate to the conversation
+        entityType: "message",
+        data: {
+          preview: text.substring(0, 100) + (text.length > 100 ? "..." : ""),
+          conversationId,
+        },
+      });
+    }
+  }
+
   await updateDoc(conversationRef, {
     lastMessage: {
       text,
@@ -745,4 +868,48 @@ export const searchUsers = async (
       user.bio?.toLowerCase().includes(lowerQuery) ||
       user.email?.toLowerCase().includes(lowerQuery)
   );
+};
+
+// Update the attendEvent function to create a notification
+export const attendEvent = async (
+  eventId: string,
+  userId: string
+): Promise<void> => {
+  try {
+    const eventRef = doc(db, "events", eventId);
+    const eventSnap = await getDoc(eventRef);
+
+    if (!eventSnap.exists()) return;
+
+    const eventData = eventSnap.data();
+    const attendees = eventData.attendees || [];
+
+    // Only update if user is not already attending
+    if (!attendees.includes(userId)) {
+      await updateDoc(eventRef, {
+        attendees: arrayUnion(userId),
+        interested: arrayRemove(userId), // Remove from interested if they were interested
+      });
+
+      // Create notification for event organizer
+      if (eventData.authorId && eventData.authorId !== userId) {
+        await createNotification({
+          userId: eventData.authorId,
+          type: "event_attendance",
+          message: `Someone is attending your event "${eventData.title}"`,
+          actorId: userId,
+          entityId: eventId,
+          entityType: "event",
+          data: {
+            preview: `${eventData.title} - ${new Date(
+              eventData.startDate
+            ).toLocaleDateString()}`,
+          },
+        });
+      }
+    }
+  } catch (error) {
+    console.error("Error attending event:", error);
+    throw new Error("Failed to RSVP to event. Please try again.");
+  }
 };

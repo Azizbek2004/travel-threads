@@ -1,9 +1,9 @@
-"use client"
+"use client";
 
-import { useRef } from "react"
+import { useRef } from "react";
 
-import type React from "react"
-import { useState, useEffect } from "react"
+import type React from "react";
+import { useState, useEffect } from "react";
 import {
   Card,
   CardContent,
@@ -29,8 +29,8 @@ import {
   Snackbar,
   Alert,
   Skeleton,
-} from "@mui/material"
-import { Link, useNavigate } from "react-router-dom"
+} from "@mui/material";
+import { Link, useNavigate } from "react-router-dom";
 import {
   Favorite,
   FavoriteBorder,
@@ -46,8 +46,8 @@ import {
   Reply,
   LocationOn,
   Message,
-} from "@mui/icons-material"
-import { useAuth } from "../../hooks/useAuth"
+} from "@mui/icons-material";
+import { useAuth } from "../../hooks/useAuth";
 import {
   getUserProfile,
   likePost,
@@ -58,210 +58,224 @@ import {
   likeComment,
   unlikeComment,
   sharePost,
-} from "../../services/firestore"
-import { formatDate } from "../../utils/helpers"
-import type { Comment } from "../../types/post"
-import { useMobile } from "../../hooks/use-mobile"
+} from "../../services/firestore";
+import { formatDate } from "../../utils/helpers";
+import type { Comment } from "../../types/post";
+import { useMobile } from "../../hooks/use-mobile";
 
 interface PostProps {
   post: {
-    id: string
-    title: string
-    content: string
-    imageUrl?: string
-    authorId: string
-    createdAt: string
-    likes: number
-    likedBy: string[]
-    commentCount: number
-    shareCount: number
+    id: string;
+    title: string;
+    content: string;
+    imageUrl?: string;
+    authorId: string;
+    createdAt: string;
+    likes: number;
+    likedBy: string[];
+    commentCount: number;
+    shareCount: number;
     location?: {
-      lat: number
-      lng: number
-      name?: string
-    }
-  }
-  isDetail?: boolean
+      lat: number;
+      lng: number;
+      name?: string;
+    };
+  };
+  isDetail?: boolean;
 }
 
 const Post = ({ post, isDetail = false }: PostProps) => {
-  const { currentUser } = useAuth()
-  const { isMobileOrTablet } = useMobile()
-  const [author, setAuthor] = useState<any>(null)
-  const [liked, setLiked] = useState(false)
-  const [likeCount, setLikeCount] = useState(post.likes || 0)
-  const [commentCount, setCommentCount] = useState(post.commentCount || 0)
-  const [shareCount, setShareCount] = useState(post.shareCount || 0)
-  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null)
-  const [shareAnchorEl, setShareAnchorEl] = useState<null | HTMLElement>(null)
-  const [showComments, setShowComments] = useState(isDetail)
-  const [comments, setComments] = useState<Comment[]>([])
-  const [newComment, setNewComment] = useState("")
-  const [loadingComments, setLoadingComments] = useState(false)
-  const [shareDialogOpen, setShareDialogOpen] = useState(false)
-  const [shareCaption, setShareCaption] = useState("")
-  const [snackbarOpen, setSnackbarOpen] = useState(false)
-  const [snackbarMessage, setSnackbarMessage] = useState("")
-  const [loading, setLoading] = useState(true)
-  const commentInputRef = useRef<HTMLInputElement>(null)
-  const navigate = useNavigate()
+  const { currentUser } = useAuth();
+  const { isMobileOrTablet } = useMobile();
+  const [author, setAuthor] = useState<any>(null);
+  const [liked, setLiked] = useState(false);
+  const [likeCount, setLikeCount] = useState(post.likes || 0);
+  const [commentCount, setCommentCount] = useState(post.commentCount || 0);
+  const [shareCount, setShareCount] = useState(post.shareCount || 0);
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const [shareAnchorEl, setShareAnchorEl] = useState<null | HTMLElement>(null);
+  const [showComments, setShowComments] = useState(isDetail);
+  const [comments, setComments] = useState<Comment[]>([]);
+  const [newComment, setNewComment] = useState("");
+  const [loadingComments, setLoadingComments] = useState(false);
+  const [shareDialogOpen, setShareDialogOpen] = useState(false);
+  const [shareCaption, setShareCaption] = useState("");
+  const [snackbarOpen, setSnackbarOpen] = useState(false);
+  const [snackbarMessage, setSnackbarMessage] = useState("");
+  const [loading, setLoading] = useState(true);
+  const commentInputRef = useRef<HTMLInputElement>(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchAuthor = async () => {
       try {
         if (post.authorId) {
-          const authorData = await getUserProfile(post.authorId)
-          setAuthor(authorData)
+          const authorData = await getUserProfile(post.authorId);
+          setAuthor(authorData);
         }
       } catch (error) {
-        console.error("Error fetching author:", error)
+        console.error("Error fetching author:", error);
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
-    }
+    };
 
-    fetchAuthor()
+    fetchAuthor();
 
     // Check if current user has liked this post
     if (currentUser && post.likedBy) {
-      setLiked(post.likedBy.includes(currentUser.uid))
+      setLiked(post.likedBy.includes(currentUser.uid));
     }
-  }, [post.authorId, post.likedBy, currentUser])
+  }, [post.authorId, post.likedBy, currentUser]);
 
   useEffect(() => {
     if (showComments) {
-      fetchComments()
+      fetchComments();
     }
-  }, [showComments, post.id])
+  }, [showComments, post.id]);
+
+  // Add this useEffect to update comment count when comments change
+  useEffect(() => {
+    if (comments.length !== commentCount) {
+      setCommentCount(comments.length);
+    }
+  }, [comments, commentCount]);
 
   const fetchComments = async () => {
-    setLoadingComments(true)
+    setLoadingComments(true);
     try {
-      const fetchedComments = await getComments(post.id)
-      setComments(fetchedComments)
+      const fetchedComments = await getComments(post.id);
+      setComments(fetchedComments);
     } catch (error) {
-      console.error("Error fetching comments:", error)
+      console.error("Error fetching comments:", error);
     } finally {
-      setLoadingComments(false)
+      setLoadingComments(false);
     }
-  }
+  };
 
   const handleLike = async () => {
-    if (!currentUser) return
+    if (!currentUser) return;
 
     try {
-      const newLikedState = !liked
+      const newLikedState = !liked;
 
       // Update UI immediately for better UX
-      setLiked(newLikedState)
-      setLikeCount((prev) => (newLikedState ? prev + 1 : prev - 1))
+      setLiked(newLikedState);
+      setLikeCount((prev) => (newLikedState ? prev + 1 : prev - 1));
 
       // Update in Firestore
       if (newLikedState) {
-        await likePost(post.id, currentUser.uid)
+        await likePost(post.id, currentUser.uid);
       } else {
-        await unlikePost(post.id, currentUser.uid)
+        await unlikePost(post.id, currentUser.uid);
       }
     } catch (error) {
-      console.error("Error updating like status:", error)
+      console.error("Error updating like status:", error);
       // Revert UI state on error
-      setLiked(!liked)
-      setLikeCount(post.likes)
+      setLiked(!liked);
+      setLikeCount(post.likes);
     }
-  }
+  };
 
   const handleCommentSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!currentUser || !newComment.trim()) return
+    e.preventDefault();
+    if (!currentUser || !newComment.trim()) return;
 
     try {
       const commentData = {
         postId: post.id,
         authorId: currentUser.uid,
         content: newComment.trim(),
-      }
+      };
 
-      await addComment(commentData)
+      await addComment(commentData);
 
       // Update UI
-      setNewComment("")
-      setCommentCount((prev) => prev + 1)
+      setNewComment("");
+      setCommentCount((prev) => prev + 1);
 
       // Refresh comments
-      fetchComments()
+      fetchComments();
     } catch (error) {
-      console.error("Error adding comment:", error)
+      console.error("Error adding comment:", error);
     }
-  }
+  };
+
+  const handleCommentKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleCommentSubmit(e as unknown as React.FormEvent);
+    }
+  };
 
   const handleShare = async () => {
-    if (!currentUser) return
+    if (!currentUser) return;
 
     try {
       const shareData = {
         postId: post.id,
         authorId: currentUser.uid,
         caption: shareCaption,
-      }
+      };
 
-      await sharePost(shareData)
+      await sharePost(shareData);
 
       // Update UI
-      setShareCount((prev) => prev + 1)
-      setShareDialogOpen(false)
-      setShareCaption("")
+      setShareCount((prev) => prev + 1);
+      setShareDialogOpen(false);
+      setShareCaption("");
 
       // Show success message
-      setSnackbarMessage("Post shared successfully!")
-      setSnackbarOpen(true)
+      setSnackbarMessage("Post shared successfully!");
+      setSnackbarOpen(true);
     } catch (error) {
-      console.error("Error sharing post:", error)
+      console.error("Error sharing post:", error);
     }
-  }
+  };
 
   const handleCopyLink = () => {
-    const postUrl = `${window.location.origin}/post/${post.id}`
-    navigator.clipboard.writeText(postUrl)
-    setShareAnchorEl(null)
+    const postUrl = `${window.location.origin}/post/${post.id}`;
+    navigator.clipboard.writeText(postUrl);
+    setShareAnchorEl(null);
 
     // Show success message
-    setSnackbarMessage("Link copied to clipboard!")
-    setSnackbarOpen(true)
-  }
+    setSnackbarMessage("Link copied to clipboard!");
+    setSnackbarOpen(true);
+  };
 
   const handleMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
-    setAnchorEl(event.currentTarget)
-  }
+    setAnchorEl(event.currentTarget);
+  };
 
   const handleMenuClose = () => {
-    setAnchorEl(null)
-  }
+    setAnchorEl(null);
+  };
 
   const handleShareMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
-    setShareAnchorEl(event.currentTarget)
-  }
+    setShareAnchorEl(event.currentTarget);
+  };
 
   const handleShareMenuClose = () => {
-    setShareAnchorEl(null)
-  }
+    setShareAnchorEl(null);
+  };
 
   const handleOpenShareDialog = () => {
-    setShareDialogOpen(true)
-    setShareAnchorEl(null)
-  }
+    setShareDialogOpen(true);
+    setShareAnchorEl(null);
+  };
 
   const handleCloseShareDialog = () => {
-    setShareDialogOpen(false)
-  }
+    setShareDialogOpen(false);
+  };
 
   const handleSnackbarClose = () => {
-    setSnackbarOpen(false)
-  }
+    setSnackbarOpen(false);
+  };
 
   const handleShareViaMessage = async () => {
     if (!currentUser) {
-      navigate("/login", { state: { from: `/post/${post.id}` } })
-      return
+      navigate("/login", { state: { from: `/post/${post.id}` } });
+      return;
     }
 
     // Navigate to messages with post data in state
@@ -274,87 +288,89 @@ const Post = ({ post, isDetail = false }: PostProps) => {
           authorId: post.authorId,
         },
       },
-    })
+    });
 
-    handleMenuClose()
-  }
+    handleMenuClose();
+  };
 
   const CommentItem = ({ comment }: { comment: Comment }) => {
-    const [commentAuthor, setCommentAuthor] = useState<any>(null)
-    const [commentLiked, setCommentLiked] = useState(false)
-    const [commentLikeCount, setCommentLikeCount] = useState(comment.likes || 0)
-    const [showReplies, setShowReplies] = useState(false)
-    const [replies, setReplies] = useState<Comment[]>([])
-    const [newReply, setNewReply] = useState("")
-    const [replyFormOpen, setReplyFormOpen] = useState(false)
-    const [loadingAuthor, setLoadingAuthor] = useState(true)
+    const [commentAuthor, setCommentAuthor] = useState<any>(null);
+    const [commentLiked, setCommentLiked] = useState(false);
+    const [commentLikeCount, setCommentLikeCount] = useState(
+      comment.likes || 0
+    );
+    const [showReplies, setShowReplies] = useState(false);
+    const [replies, setReplies] = useState<Comment[]>([]);
+    const [newReply, setNewReply] = useState("");
+    const [replyFormOpen, setReplyFormOpen] = useState(false);
+    const [loadingAuthor, setLoadingAuthor] = useState(true);
 
     useEffect(() => {
       const fetchCommentAuthor = async () => {
         try {
           if (comment.authorId) {
-            const authorData = await getUserProfile(comment.authorId)
-            setCommentAuthor(authorData)
+            const authorData = await getUserProfile(comment.authorId);
+            setCommentAuthor(authorData);
           }
         } catch (error) {
-          console.error("Error fetching comment author:", error)
+          console.error("Error fetching comment author:", error);
         } finally {
-          setLoadingAuthor(false)
+          setLoadingAuthor(false);
         }
-      }
+      };
 
-      fetchCommentAuthor()
+      fetchCommentAuthor();
 
       // Check if current user has liked this comment
       if (currentUser && comment.likedBy) {
-        setCommentLiked(comment.likedBy.includes(currentUser.uid))
+        setCommentLiked(comment.likedBy.includes(currentUser.uid));
       }
-    }, [comment.authorId, comment.likedBy])
+    }, [comment.authorId, comment.likedBy]);
 
     useEffect(() => {
       if (showReplies) {
-        fetchReplies()
+        fetchReplies();
       }
-    }, [showReplies])
+    }, [showReplies]);
 
     const fetchReplies = async () => {
       try {
         if (comment.id) {
-          const fetchedReplies = await getReplies(comment.id)
-          setReplies(fetchedReplies)
+          const fetchedReplies = await getReplies(comment.id);
+          setReplies(fetchedReplies);
         }
       } catch (error) {
-        console.error("Error fetching replies:", error)
+        console.error("Error fetching replies:", error);
       }
-    }
+    };
 
     const handleCommentLike = async () => {
-      if (!currentUser) return
+      if (!currentUser) return;
 
       try {
-        const newLikedState = !commentLiked
+        const newLikedState = !commentLiked;
 
         // Update UI immediately
-        setCommentLiked(newLikedState)
-        setCommentLikeCount((prev) => (newLikedState ? prev + 1 : prev - 1))
+        setCommentLiked(newLikedState);
+        setCommentLikeCount((prev) => (newLikedState ? prev + 1 : prev - 1));
 
         // Update in Firestore
         if (newLikedState) {
-          await likeComment(comment.id, currentUser.uid)
+          await likeComment(comment.id, currentUser.uid);
         } else {
-          await unlikeComment(comment.id, currentUser.uid)
+          await unlikeComment(comment.id, currentUser.uid);
         }
       } catch (error) {
-        console.error("Error updating comment like status:", error)
+        console.error("Error updating comment like status:", error);
         // Revert UI state on error
-        setCommentLiked(!commentLiked)
-        setCommentLikeCount(comment.likes)
+        setCommentLiked(!commentLiked);
+        setCommentLikeCount(comment.likes);
       }
-    }
+    };
 
     const handleReplySubmit = async (e: React.FormEvent) => {
-      e.preventDefault()
-      if (!currentUser || !newReply.trim()) return
+      e.preventDefault();
+      if (!currentUser || !newReply.trim()) return;
 
       try {
         const replyData = {
@@ -362,21 +378,21 @@ const Post = ({ post, isDetail = false }: PostProps) => {
           authorId: currentUser.uid,
           content: newReply.trim(),
           parentId: comment.id,
-        }
+        };
 
-        await addComment(replyData)
+        await addComment(replyData);
 
         // Update UI
-        setNewReply("")
-        setReplyFormOpen(false)
+        setNewReply("");
+        setReplyFormOpen(false);
 
         // Show replies and refresh
-        setShowReplies(true)
-        fetchReplies()
+        setShowReplies(true);
+        fetchReplies();
       } catch (error) {
-        console.error("Error adding reply:", error)
+        console.error("Error adding reply:", error);
       }
-    }
+    };
 
     if (loadingAuthor) {
       return (
@@ -384,9 +400,12 @@ const Post = ({ post, isDetail = false }: PostProps) => {
           <ListItemAvatar>
             <Skeleton variant="circular" width={40} height={40} />
           </ListItemAvatar>
-          <ListItemText primary={<Skeleton width="40%" />} secondary={<Skeleton width="80%" />} />
+          <ListItemText
+            primary={<Skeleton width="40%" />}
+            secondary={<Skeleton width="80%" />}
+          />
         </ListItem>
-      )
+      );
     }
 
     return (
@@ -404,7 +423,9 @@ const Post = ({ post, isDetail = false }: PostProps) => {
                 height: isMobileOrTablet ? 32 : 40,
               }}
             >
-              {commentAuthor?.displayName ? commentAuthor.displayName.charAt(0).toUpperCase() : "U"}
+              {commentAuthor?.displayName
+                ? commentAuthor.displayName.charAt(0).toUpperCase()
+                : "U"}
             </Avatar>
           </ListItemAvatar>
           <ListItemText
@@ -446,7 +467,13 @@ const Post = ({ post, isDetail = false }: PostProps) => {
                 <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
                   <Button
                     size="small"
-                    startIcon={commentLiked ? <Favorite color="error" /> : <FavoriteBorder />}
+                    startIcon={
+                      commentLiked ? (
+                        <Favorite color="error" />
+                      ) : (
+                        <FavoriteBorder />
+                      )
+                    }
                     onClick={handleCommentLike}
                     sx={{ minWidth: "auto", p: 0 }}
                   >
@@ -461,7 +488,11 @@ const Post = ({ post, isDetail = false }: PostProps) => {
                     Reply
                   </Button>
                   {!showReplies && replies.length === 0 && (
-                    <Button size="small" onClick={() => setShowReplies(true)} sx={{ minWidth: "auto", p: 0 }}>
+                    <Button
+                      size="small"
+                      onClick={() => setShowReplies(true)}
+                      sx={{ minWidth: "auto", p: 0 }}
+                    >
                       View replies
                     </Button>
                   )}
@@ -473,7 +504,11 @@ const Post = ({ post, isDetail = false }: PostProps) => {
 
         {/* Reply form */}
         {replyFormOpen && (
-          <Box component="form" onSubmit={handleReplySubmit} sx={{ pl: 7, pr: 2, mb: 2 }}>
+          <Box
+            component="form"
+            onSubmit={handleReplySubmit}
+            sx={{ pl: 7, pr: 2, mb: 2 }}
+          >
             <TextField
               placeholder="Write a reply..."
               value={newReply}
@@ -489,7 +524,12 @@ const Post = ({ post, isDetail = false }: PostProps) => {
               <Button size="small" onClick={() => setReplyFormOpen(false)}>
                 Cancel
               </Button>
-              <Button size="small" variant="contained" type="submit" disabled={!newReply.trim()}>
+              <Button
+                size="small"
+                variant="contained"
+                type="submit"
+                disabled={!newReply.trim()}
+              >
                 Reply
               </Button>
             </Box>
@@ -507,8 +547,8 @@ const Post = ({ post, isDetail = false }: PostProps) => {
           </Box>
         )}
       </>
-    )
-  }
+    );
+  };
 
   // Show loading state
   if (loading) {
@@ -527,7 +567,7 @@ const Post = ({ post, isDetail = false }: PostProps) => {
           <Skeleton width="60%" />
         </CardContent>
       </Card>
-    )
+    );
   }
 
   // Mobile-optimized post card
@@ -554,7 +594,9 @@ const Post = ({ post, isDetail = false }: PostProps) => {
                 to={`/profile/${post.authorId}`}
                 sx={{ mr: 1.5, cursor: "pointer", width: 36, height: 36 }}
               >
-                {author.displayName ? author.displayName.charAt(0).toUpperCase() : "U"}
+                {author.displayName
+                  ? author.displayName.charAt(0).toUpperCase()
+                  : "U"}
               </Avatar>
               <Box sx={{ flexGrow: 1 }}>
                 <Typography
@@ -569,11 +611,22 @@ const Post = ({ post, isDetail = false }: PostProps) => {
                 >
                   {author.displayName || "Anonymous User"}
                 </Typography>
-                <Typography variant="caption" color="text.secondary" display="block" sx={{ fontSize: "0.7rem" }}>
+                <Typography
+                  variant="caption"
+                  color="text.secondary"
+                  display="block"
+                  sx={{ fontSize: "0.7rem" }}
+                >
                   {formatDate(post.createdAt)}
                   {post.location?.name && (
-                    <Box component="span" sx={{ display: "flex", alignItems: "center", mt: 0.5 }}>
-                      <LocationOn fontSize="inherit" sx={{ mr: 0.5, fontSize: "0.8rem" }} />
+                    <Box
+                      component="span"
+                      sx={{ display: "flex", alignItems: "center", mt: 0.5 }}
+                    >
+                      <LocationOn
+                        fontSize="inherit"
+                        sx={{ mr: 0.5, fontSize: "0.8rem" }}
+                      />
                       {post.location.name}
                     </Box>
                   )}
@@ -582,18 +635,31 @@ const Post = ({ post, isDetail = false }: PostProps) => {
               <IconButton sx={{ padding: 0.5 }} onClick={handleMenuOpen}>
                 <MoreHoriz fontSize="small" />
               </IconButton>
-              <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={handleMenuClose}>
+              <Menu
+                anchorEl={anchorEl}
+                open={Boolean(anchorEl)}
+                onClose={handleMenuClose}
+              >
                 <MenuItem component={Link} to={`/post/${post.id}`}>
                   View Post
                 </MenuItem>
-                {currentUser && currentUser.uid === post.authorId && <MenuItem>Edit Post</MenuItem>}
+                {currentUser && currentUser.uid === post.authorId && (
+                  <MenuItem>Edit Post</MenuItem>
+                )}
                 <MenuItem onClick={handleCopyLink}>Copy Link</MenuItem>
-                {currentUser && currentUser.uid !== post.authorId && <MenuItem>Report</MenuItem>}
+                {currentUser && currentUser.uid !== post.authorId && (
+                  <MenuItem>Report</MenuItem>
+                )}
               </Menu>
             </>
           ) : (
             <Box sx={{ display: "flex", alignItems: "center", width: "100%" }}>
-              <Skeleton variant="circular" width={36} height={36} sx={{ mr: 1.5 }} />
+              <Skeleton
+                variant="circular"
+                width={36}
+                height={36}
+                sx={{ mr: 1.5 }}
+              />
               <Box sx={{ flexGrow: 1 }}>
                 <Skeleton variant="text" width="60%" height={20} />
                 <Skeleton variant="text" width="40%" height={16} />
@@ -659,12 +725,17 @@ const Post = ({ post, isDetail = false }: PostProps) => {
             }}
           >
             <Typography variant="caption" color="text.secondary">
-              {likeCount > 0 && `${likeCount} ${likeCount === 1 ? "like" : "likes"}`}
+              {likeCount > 0 &&
+                `${likeCount} ${likeCount === 1 ? "like" : "likes"}`}
             </Typography>
             <Typography variant="caption" color="text.secondary">
-              {commentCount > 0 && `${commentCount} ${commentCount === 1 ? "comment" : "comments"}`}
+              {commentCount > 0 &&
+                `${commentCount} ${
+                  commentCount === 1 ? "comment" : "comments"
+                }`}
               {commentCount > 0 && shareCount > 0 && " • "}
-              {shareCount > 0 && `${shareCount} ${shareCount === 1 ? "share" : "shares"}`}
+              {shareCount > 0 &&
+                `${shareCount} ${shareCount === 1 ? "share" : "shares"}`}
             </Typography>
           </Box>
         )}
@@ -679,20 +750,32 @@ const Post = ({ post, isDetail = false }: PostProps) => {
             color={liked ? "error" : "default"}
             sx={{ borderRadius: 1, px: 1 }}
           >
-            {liked ? <Favorite fontSize="small" /> : <FavoriteBorder fontSize="small" />}
+            {liked ? (
+              <Favorite fontSize="small" />
+            ) : (
+              <FavoriteBorder fontSize="small" />
+            )}
             <Typography variant="caption" sx={{ ml: 0.5, fontSize: "0.7rem" }}>
               {likeCount > 0 ? likeCount : ""}
             </Typography>
           </IconButton>
 
-          <IconButton size="small" onClick={() => setShowComments(!showComments)} sx={{ borderRadius: 1, px: 1 }}>
+          <IconButton
+            size="small"
+            onClick={() => setShowComments(!showComments)}
+            sx={{ borderRadius: 1, px: 1 }}
+          >
             <ChatBubbleOutline fontSize="small" />
             <Typography variant="caption" sx={{ ml: 0.5, fontSize: "0.7rem" }}>
               {commentCount > 0 ? commentCount : ""}
             </Typography>
           </IconButton>
 
-          <IconButton size="small" onClick={handleShareMenuOpen} sx={{ borderRadius: 1, px: 1 }}>
+          <IconButton
+            size="small"
+            onClick={handleShareMenuOpen}
+            sx={{ borderRadius: 1, px: 1 }}
+          >
             <ShareIcon fontSize="small" />
             <Typography variant="caption" sx={{ ml: 0.5, fontSize: "0.7rem" }}>
               {shareCount > 0 ? shareCount : ""}
@@ -706,13 +789,19 @@ const Post = ({ post, isDetail = false }: PostProps) => {
           <Box sx={{ p: 1.5 }}>
             {/* Comment Form */}
             {currentUser && (
-              <Box component="form" onSubmit={handleCommentSubmit} sx={{ display: "flex", mb: 2 }}>
+              <Box
+                component="form"
+                onSubmit={handleCommentSubmit}
+                sx={{ display: "flex", mb: 2 }}
+              >
                 <Avatar
                   src={currentUser.photoURL || undefined}
                   alt={currentUser.displayName || "User"}
                   sx={{ mr: 1, width: 32, height: 32 }}
                 >
-                  {currentUser.displayName ? currentUser.displayName.charAt(0).toUpperCase() : "U"}
+                  {currentUser.displayName
+                    ? currentUser.displayName.charAt(0).toUpperCase()
+                    : "U"}
                 </Avatar>
                 <TextField
                   placeholder="Write a comment..."
@@ -721,9 +810,14 @@ const Post = ({ post, isDetail = false }: PostProps) => {
                   fullWidth
                   size="small"
                   inputRef={commentInputRef}
+                  onKeyPress={handleCommentKeyPress}
                   InputProps={{
                     endAdornment: (
-                      <IconButton type="submit" disabled={!newComment.trim()} size="small">
+                      <IconButton
+                        type="submit"
+                        disabled={!newComment.trim()}
+                        size="small"
+                      >
                         <Send fontSize="small" />
                       </IconButton>
                     ),
@@ -740,7 +834,10 @@ const Post = ({ post, isDetail = false }: PostProps) => {
             ) : comments.length > 0 ? (
               <List disablePadding>
                 {comments.map((comment) => (
-                  <CommentItem key={`comment-${comment.id}`} comment={comment} />
+                  <CommentItem
+                    key={`comment-${comment.id}`}
+                    comment={comment}
+                  />
                 ))}
               </List>
             ) : (
@@ -752,7 +849,12 @@ const Post = ({ post, isDetail = false }: PostProps) => {
         </Collapse>
 
         {/* Share Dialog */}
-        <Dialog open={shareDialogOpen} onClose={handleCloseShareDialog} maxWidth="sm" fullWidth>
+        <Dialog
+          open={shareDialogOpen}
+          onClose={handleCloseShareDialog}
+          maxWidth="sm"
+          fullWidth
+        >
           <DialogTitle>Share this post</DialogTitle>
           <DialogContent>
             <Box sx={{ mb: 2 }}>
@@ -788,12 +890,16 @@ const Post = ({ post, isDetail = false }: PostProps) => {
           onClose={handleSnackbarClose}
           anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
         >
-          <Alert onClose={handleSnackbarClose} severity="success" sx={{ width: "100%" }}>
+          <Alert
+            onClose={handleSnackbarClose}
+            severity="success"
+            sx={{ width: "100%" }}
+          >
             {snackbarMessage}
           </Alert>
         </Snackbar>
       </Card>
-    )
+    );
   }
 
   // Desktop post card
@@ -810,7 +916,9 @@ const Post = ({ post, isDetail = false }: PostProps) => {
               to={`/profile/${post.authorId}`}
               sx={{ mr: 1, cursor: "pointer" }}
             >
-              {author.displayName ? author.displayName.charAt(0).toUpperCase() : "U"}
+              {author.displayName
+                ? author.displayName.charAt(0).toUpperCase()
+                : "U"}
             </Avatar>
             <Box>
               <Typography
@@ -825,7 +933,11 @@ const Post = ({ post, isDetail = false }: PostProps) => {
               >
                 {author.displayName || "Anonymous User"}
               </Typography>
-              <Typography variant="caption" color="text.secondary" display="block">
+              <Typography
+                variant="caption"
+                color="text.secondary"
+                display="block"
+              >
                 {formatDate(post.createdAt)}
                 {post.location?.name && ` • ${post.location.name}`}
               </Typography>
@@ -833,13 +945,21 @@ const Post = ({ post, isDetail = false }: PostProps) => {
             <IconButton sx={{ ml: "auto" }} onClick={handleMenuOpen}>
               <MoreHoriz />
             </IconButton>
-            <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={handleMenuClose}>
+            <Menu
+              anchorEl={anchorEl}
+              open={Boolean(anchorEl)}
+              onClose={handleMenuClose}
+            >
               <MenuItem component={Link} to={`/post/${post.id}`}>
                 View Post
               </MenuItem>
-              {currentUser && currentUser.uid === post.authorId && <MenuItem>Edit Post</MenuItem>}
+              {currentUser && currentUser.uid === post.authorId && (
+                <MenuItem>Edit Post</MenuItem>
+              )}
               <MenuItem onClick={handleCopyLink}>Copy Link</MenuItem>
-              {currentUser && currentUser.uid !== post.authorId && <MenuItem>Report</MenuItem>}
+              {currentUser && currentUser.uid !== post.authorId && (
+                <MenuItem>Report</MenuItem>
+              )}
             </Menu>
           </>
         )}
@@ -860,7 +980,11 @@ const Post = ({ post, isDetail = false }: PostProps) => {
         </Typography>
         {post.imageUrl && (
           <Box sx={{ mt: 2, borderRadius: 2, overflow: "hidden" }}>
-            <img src={post.imageUrl || "/placeholder.svg"} alt="Post" style={{ width: "100%", display: "block" }} />
+            <img
+              src={post.imageUrl || "/placeholder.svg"}
+              alt="Post"
+              style={{ width: "100%", display: "block" }}
+            />
           </Box>
         )}
       </CardContent>
@@ -869,12 +993,15 @@ const Post = ({ post, isDetail = false }: PostProps) => {
       {(likeCount > 0 || commentCount > 0 || shareCount > 0) && (
         <Box sx={{ px: 2, display: "flex", justifyContent: "space-between" }}>
           <Typography variant="body2" color="text.secondary">
-            {likeCount > 0 && `${likeCount} ${likeCount === 1 ? "like" : "likes"}`}
+            {likeCount > 0 &&
+              `${likeCount} ${likeCount === 1 ? "like" : "likes"}`}
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            {commentCount > 0 && `${commentCount} ${commentCount === 1 ? "comment" : "comments"}`}
+            {commentCount > 0 &&
+              `${commentCount} ${commentCount === 1 ? "comment" : "comments"}`}
             {commentCount > 0 && shareCount > 0 && " • "}
-            {shareCount > 0 && `${shareCount} ${shareCount === 1 ? "share" : "shares"}`}
+            {shareCount > 0 &&
+              `${shareCount} ${shareCount === 1 ? "share" : "shares"}`}
           </Typography>
         </Box>
       )}
@@ -883,18 +1010,34 @@ const Post = ({ post, isDetail = false }: PostProps) => {
 
       {/* Post Actions */}
       <CardActions sx={{ px: 2, pb: 1 }}>
-        <Button startIcon={liked ? <Favorite color="error" /> : <FavoriteBorder />} onClick={handleLike} size="small">
+        <Button
+          startIcon={liked ? <Favorite color="error" /> : <FavoriteBorder />}
+          onClick={handleLike}
+          size="small"
+        >
           {liked ? "Liked" : "Like"}
         </Button>
-        <Button startIcon={<ChatBubbleOutline />} onClick={() => setShowComments(!showComments)} size="small">
+        <Button
+          startIcon={<ChatBubbleOutline />}
+          onClick={() => setShowComments(!showComments)}
+          size="small"
+        >
           Comment
         </Button>
-        <Button startIcon={<ShareIcon />} onClick={handleShareMenuOpen} size="small">
+        <Button
+          startIcon={<ShareIcon />}
+          onClick={handleShareMenuOpen}
+          size="small"
+        >
           Share
         </Button>
 
         {/* Share Menu */}
-        <Menu anchorEl={shareAnchorEl} open={Boolean(shareAnchorEl)} onClose={handleShareMenuClose}>
+        <Menu
+          anchorEl={shareAnchorEl}
+          open={Boolean(shareAnchorEl)}
+          onClose={handleShareMenuClose}
+        >
           <MenuItem onClick={handleCopyLink}>
             <ContentCopy fontSize="small" sx={{ mr: 1 }} />
             Copy Link
@@ -928,9 +1071,19 @@ const Post = ({ post, isDetail = false }: PostProps) => {
         <Box sx={{ p: 2 }}>
           {/* Comment Form */}
           {currentUser && (
-            <Box component="form" onSubmit={handleCommentSubmit} sx={{ display: "flex", mb: 2 }}>
-              <Avatar src={currentUser.photoURL || undefined} alt={currentUser.displayName || "User"} sx={{ mr: 1 }}>
-                {currentUser.displayName ? currentUser.displayName.charAt(0).toUpperCase() : "U"}
+            <Box
+              component="form"
+              onSubmit={handleCommentSubmit}
+              sx={{ display: "flex", mb: 2 }}
+            >
+              <Avatar
+                src={currentUser.photoURL || undefined}
+                alt={currentUser.displayName || "User"}
+                sx={{ mr: 1 }}
+              >
+                {currentUser.displayName
+                  ? currentUser.displayName.charAt(0).toUpperCase()
+                  : "U"}
               </Avatar>
               <TextField
                 placeholder="Write a comment..."
@@ -939,9 +1092,14 @@ const Post = ({ post, isDetail = false }: PostProps) => {
                 fullWidth
                 size="small"
                 inputRef={commentInputRef}
+                onKeyPress={handleCommentKeyPress}
                 InputProps={{
                   endAdornment: (
-                    <IconButton type="submit" disabled={!newComment.trim()} size="small">
+                    <IconButton
+                      type="submit"
+                      disabled={!newComment.trim()}
+                      size="small"
+                    >
                       <Send fontSize="small" />
                     </IconButton>
                   ),
@@ -968,7 +1126,12 @@ const Post = ({ post, isDetail = false }: PostProps) => {
       </Collapse>
 
       {/* Share Dialog */}
-      <Dialog open={shareDialogOpen} onClose={handleCloseShareDialog} maxWidth="sm" fullWidth>
+      <Dialog
+        open={shareDialogOpen}
+        onClose={handleCloseShareDialog}
+        maxWidth="sm"
+        fullWidth
+      >
         <DialogTitle>Share this post</DialogTitle>
         <DialogContent>
           <Box sx={{ mb: 2 }}>
@@ -1004,12 +1167,16 @@ const Post = ({ post, isDetail = false }: PostProps) => {
         onClose={handleSnackbarClose}
         anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
       >
-        <Alert onClose={handleSnackbarClose} severity="success" sx={{ width: "100%" }}>
+        <Alert
+          onClose={handleSnackbarClose}
+          severity="success"
+          sx={{ width: "100%" }}
+        >
           {snackbarMessage}
         </Alert>
       </Snackbar>
     </Card>
-  )
-}
+  );
+};
 
-export default Post
+export default Post;

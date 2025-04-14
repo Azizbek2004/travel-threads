@@ -1,8 +1,8 @@
-"use client"
+"use client";
 
-import React from "react"
+import React from "react";
 
-import { useState, useRef, useEffect } from "react"
+import { useState, useRef, useEffect } from "react";
 import {
   TextField,
   Button,
@@ -23,60 +23,71 @@ import {
   Avatar,
   Typography,
   Divider,
-} from "@mui/material"
-import { Send, AttachFile, InsertEmoticon, Close, Event, Article } from "@mui/icons-material"
-import { sendMessage } from "../../services/firestore"
-import { useAuth } from "../../hooks/useAuth"
-import { uploadImage } from "../../services/storage"
-import { useMobile } from "../../hooks/use-mobile"
-import { getPosts } from "../../services/firestore"
-import { getUpcomingEvents } from "../../services/events"
-import data from "@emoji-mart/data"
-import Picker from "@emoji-mart/react"
+} from "@mui/material";
+import {
+  Send,
+  AttachFile,
+  InsertEmoticon,
+  Close,
+  Event,
+  Article,
+} from "@mui/icons-material";
+import { sendMessage } from "../../services/firestore";
+import { useAuth } from "../../hooks/useAuth";
+import { uploadImage } from "../../services/storage";
+import { useMobile } from "../../hooks/use-mobile";
+import { getPosts } from "../../services/firestore";
+import { getUpcomingEvents } from "../../services/events";
+import data from "@emoji-mart/data";
+import Picker from "@emoji-mart/react";
 
 interface SendMessageProps {
-  conversationId: string
-  otherUserId: string // Keeping this for future use even if not currently used
-  replyText?: string
-  onClearReply?: () => void
+  conversationId: string;
+  otherUserId: string; // Keeping this for future use even if not currently used
+  replyText?: string;
+  onClearReply?: () => void;
 }
 
-const SendMessage = ({ conversationId, replyText, onClearReply }: SendMessageProps) => {
-  const { currentUser } = useAuth()
-  const [text, setText] = useState("")
-  const [sending, setSending] = useState(false)
-  const [image, setImage] = useState<File | null>(null)
-  const [imagePreview, setImagePreview] = useState<string | null>(null)
-  const [showEmojiPicker, setShowEmojiPicker] = useState(false)
-  const fileInputRef = useRef<HTMLInputElement>(null)
-  const textFieldRef = useRef<HTMLInputElement>(null)
-  const { isMobileOrTablet } = useMobile()
+const SendMessage = ({
+  conversationId,
+  replyText,
+  onClearReply,
+}: SendMessageProps) => {
+  const { currentUser } = useAuth();
+  const [text, setText] = useState("");
+  const [sending, setSending] = useState(false);
+  const [image, setImage] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const textFieldRef = useRef<HTMLInputElement>(null);
+  const { isMobileOrTablet } = useMobile();
 
-  const [showShareDialog, setShowShareDialog] = useState(false)
-  const [shareType, setShareType] = useState<"post" | "event" | null>(null)
-  const [posts, setPosts] = useState<any[]>([])
-  const [events, setEvents] = useState<any[]>([])
-  const [loadingSharedContent, setLoadingSharedContent] = useState(false)
-  const [selectedPost, setSelectedPost] = useState<any>(null)
-  const [selectedEvent, setSelectedEvent] = useState<any>(null)
+  const [showShareDialog, setShowShareDialog] = useState(false);
+  const [shareType, setShareType] = useState<"post" | "event" | null>(null);
+  const [posts, setPosts] = useState<any[]>([]);
+  const [events, setEvents] = useState<any[]>([]);
+  const [loadingSharedContent, setLoadingSharedContent] = useState(false);
+  const [selectedPost, setSelectedPost] = useState<any>(null);
+  const [selectedEvent, setSelectedEvent] = useState<any>(null);
 
   // Focus on text field when reply text changes
   useEffect(() => {
     if (replyText) {
-      textFieldRef.current?.focus()
+      textFieldRef.current?.focus();
     }
-  }, [replyText])
+  }, [replyText]);
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!currentUser || (!text.trim() && !image)) return
+    e.preventDefault();
+    if (!currentUser || (!text.trim() && !image)) return;
 
-    setSending(true)
+    setSending(true);
 
     try {
-      let mediaUrl = ""
+      let mediaUrl = "";
       if (image) {
-        mediaUrl = await uploadImage(image)
+        mediaUrl = await uploadImage(image);
       }
 
       const messageData: any = {
@@ -84,7 +95,7 @@ const SendMessage = ({ conversationId, replyText, onClearReply }: SendMessagePro
         senderId: currentUser.uid,
         text: text.trim(),
         mediaUrl,
-      }
+      };
 
       // Add shared content if selected
       if (selectedPost) {
@@ -93,7 +104,7 @@ const SendMessage = ({ conversationId, replyText, onClearReply }: SendMessagePro
           title: selectedPost.title,
           content: selectedPost.content,
           authorId: selectedPost.authorId,
-        }
+        };
       }
 
       if (selectedEvent) {
@@ -102,7 +113,7 @@ const SendMessage = ({ conversationId, replyText, onClearReply }: SendMessagePro
           title: selectedEvent.title,
           startDate: selectedEvent.startDate,
           location: selectedEvent.location,
-        }
+        };
       }
 
       await sendMessage(
@@ -111,100 +122,107 @@ const SendMessage = ({ conversationId, replyText, onClearReply }: SendMessagePro
         text.trim(),
         mediaUrl,
         messageData.sharedPost,
-        messageData.sharedEvent,
-      )
+        messageData.sharedEvent
+      );
 
-      setText("")
-      setImage(null)
-      setImagePreview(null)
-      if (onClearReply) onClearReply()
-      setShowEmojiPicker(false)
-      setSelectedPost(null)
-      setSelectedEvent(null)
+      setText("");
+      setImage(null);
+      setImagePreview(null);
+      if (onClearReply) onClearReply();
+      setShowEmojiPicker(false);
+      setSelectedPost(null);
+      setSelectedEvent(null);
 
       // Focus back on the text field after sending
-      textFieldRef.current?.focus()
+      textFieldRef.current?.focus();
     } catch (error) {
-      console.error("Error sending message:", error)
+      console.error("Error sending message:", error);
     } finally {
-      setSending(false)
+      setSending(false);
     }
-  }
+  };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0]
-      setImage(file)
+      const file = e.target.files[0];
+      setImage(file);
 
       // Create preview
-      const reader = new FileReader()
+      const reader = new FileReader();
       reader.onload = () => {
-        setImagePreview(reader.result as string)
-      }
-      reader.readAsDataURL(file)
+        setImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
     }
-  }
+  };
 
   const handleEmojiSelect = (emoji: any) => {
-    setText((prev) => prev + emoji.native)
-  }
+    setText((prev) => prev + emoji.native);
+  };
 
   const handleRemoveImage = () => {
-    setImage(null)
-    setImagePreview(null)
+    setImage(null);
+    setImagePreview(null);
     if (fileInputRef.current) {
-      fileInputRef.current.value = ""
+      fileInputRef.current.value = "";
     }
-  }
+  };
 
   const fetchPosts = async () => {
-    setLoadingSharedContent(true)
+    setLoadingSharedContent(true);
     try {
-      const fetchedPosts = await getPosts()
-      setPosts(fetchedPosts)
+      const fetchedPosts = await getPosts();
+      setPosts(fetchedPosts);
     } catch (error) {
-      console.error("Error fetching posts:", error)
+      console.error("Error fetching posts:", error);
     } finally {
-      setLoadingSharedContent(false)
+      setLoadingSharedContent(false);
     }
-  }
+  };
 
   const fetchEvents = async () => {
-    setLoadingSharedContent(true)
+    setLoadingSharedContent(true);
     try {
-      const fetchedEvents = await getUpcomingEvents(10)
-      setEvents(fetchedEvents)
+      const fetchedEvents = await getUpcomingEvents(10);
+      setEvents(fetchedEvents);
     } catch (error) {
-      console.error("Error fetching events:", error)
+      console.error("Error fetching events:", error);
     } finally {
-      setLoadingSharedContent(false)
+      setLoadingSharedContent(false);
     }
-  }
+  };
 
   const openShareDialog = (type: "post" | "event") => {
-    setShareType(type)
-    setShowShareDialog(true)
+    setShareType(type);
+    setShowShareDialog(true);
     if (type === "post") {
-      fetchPosts()
+      fetchPosts();
     } else {
-      fetchEvents()
+      fetchEvents();
     }
-  }
+  };
 
   const handleShareDialogClose = () => {
-    setShowShareDialog(false)
-    setShareType(null)
-  }
+    setShowShareDialog(false);
+    setShareType(null);
+  };
 
   const handleSelectPost = (post: any) => {
-    setSelectedPost(post)
-    setShowShareDialog(false)
-  }
+    setSelectedPost(post);
+    setShowShareDialog(false);
+  };
 
   const handleSelectEvent = (event: any) => {
-    setSelectedEvent(event)
-    setShowShareDialog(false)
-  }
+    setSelectedEvent(event);
+    setShowShareDialog(false);
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleSubmit(e as unknown as React.FormEvent);
+    }
+  };
 
   return (
     <Box component="form" onSubmit={handleSubmit} sx={{ position: "relative" }}>
@@ -285,7 +303,9 @@ const SendMessage = ({ conversationId, replyText, onClearReply }: SendMessagePro
           }}
         >
           <Box>
-            <Typography variant="subtitle2">Sharing post: {selectedPost.title}</Typography>
+            <Typography variant="subtitle2">
+              Sharing post: {selectedPost.title}
+            </Typography>
             <Typography variant="caption" color="text.secondary">
               {selectedPost.content.substring(0, 60)}...
             </Typography>
@@ -308,8 +328,14 @@ const SendMessage = ({ conversationId, replyText, onClearReply }: SendMessagePro
           }}
         >
           <Box>
-            <Typography variant="subtitle2">Sharing event: {selectedEvent.title}</Typography>
-            <Typography variant="caption" color="text.secondary" display="block">
+            <Typography variant="subtitle2">
+              Sharing event: {selectedEvent.title}
+            </Typography>
+            <Typography
+              variant="caption"
+              color="text.secondary"
+              display="block"
+            >
               {new Date(selectedEvent.startDate).toLocaleDateString()}
             </Typography>
           </Box>
@@ -370,6 +396,7 @@ const SendMessage = ({ conversationId, replyText, onClearReply }: SendMessagePro
           maxRows={4}
           inputRef={textFieldRef}
           sx={{ ml: 1 }}
+          onKeyPress={handleKeyPress}
           InputProps={{
             endAdornment: (
               <Button
@@ -385,7 +412,11 @@ const SendMessage = ({ conversationId, replyText, onClearReply }: SendMessagePro
                   p: 0,
                 }}
               >
-                {sending ? <CircularProgress size={24} color="inherit" /> : <Send />}
+                {sending ? (
+                  <CircularProgress size={24} color="inherit" />
+                ) : (
+                  <Send />
+                )}
               </Button>
             ),
           }}
@@ -415,8 +446,15 @@ const SendMessage = ({ conversationId, replyText, onClearReply }: SendMessagePro
       </Collapse>
 
       {/* Share Dialog */}
-      <Dialog open={showShareDialog} onClose={handleShareDialogClose} fullWidth maxWidth="sm">
-        <DialogTitle>{shareType === "post" ? "Share a Post" : "Share an Event"}</DialogTitle>
+      <Dialog
+        open={showShareDialog}
+        onClose={handleShareDialogClose}
+        fullWidth
+        maxWidth="sm"
+      >
+        <DialogTitle>
+          {shareType === "post" ? "Share a Post" : "Share an Event"}
+        </DialogTitle>
         <DialogContent dividers>
           {loadingSharedContent ? (
             <Box sx={{ display: "flex", justifyContent: "center", p: 3 }}>
@@ -428,26 +466,39 @@ const SendMessage = ({ conversationId, replyText, onClearReply }: SendMessagePro
                 posts.length > 0 ? (
                   posts.map((post) => (
                     <React.Fragment key={post.id}>
-                      <ListItem onClick={() => handleSelectPost(post)} sx={{ cursor: "pointer" }}>
+                      <ListItem
+                        onClick={() => handleSelectPost(post)}
+                        sx={{ cursor: "pointer" }}
+                      >
                         <ListItemAvatar>
                           <Avatar>
                             <Article />
                           </Avatar>
                         </ListItemAvatar>
-                        <ListItemText primary={post.title} secondary={post.content.substring(0, 60) + "..."} />
+                        <ListItemText
+                          primary={post.title}
+                          secondary={post.content.substring(0, 60) + "..."}
+                        />
                       </ListItem>
                       <Divider component="li" />
                     </React.Fragment>
                   ))
                 ) : (
-                  <Typography align="center" color="text.secondary" sx={{ p: 2 }}>
+                  <Typography
+                    align="center"
+                    color="text.secondary"
+                    sx={{ p: 2 }}
+                  >
                     No posts available to share
                   </Typography>
                 )
               ) : events.length > 0 ? (
                 events.map((event) => (
                   <React.Fragment key={event.id}>
-                    <ListItem onClick={() => handleSelectEvent(event)} sx={{ cursor: "pointer" }}>
+                    <ListItem
+                      onClick={() => handleSelectEvent(event)}
+                      sx={{ cursor: "pointer" }}
+                    >
                       <ListItemAvatar>
                         <Avatar>
                           <Event />
@@ -457,7 +508,11 @@ const SendMessage = ({ conversationId, replyText, onClearReply }: SendMessagePro
                         primary={event.title}
                         secondary={
                           <>
-                            <Typography component="span" variant="body2" display="block">
+                            <Typography
+                              component="span"
+                              variant="body2"
+                              display="block"
+                            >
                               {new Date(event.startDate).toLocaleDateString()}
                             </Typography>
                             {event.location?.name && (
@@ -485,7 +540,7 @@ const SendMessage = ({ conversationId, replyText, onClearReply }: SendMessagePro
         </DialogActions>
       </Dialog>
     </Box>
-  )
-}
+  );
+};
 
-export default SendMessage
+export default SendMessage;
