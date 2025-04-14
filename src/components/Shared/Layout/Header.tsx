@@ -196,7 +196,7 @@ const Header = () => {
                   >
                     Search
                   </MenuItem>
-                  {currentUser.isAdmin && (
+                  {currentUser && currentUser.isAdmin && (
                     <MenuItem
                       component={Link}
                       to="/admin"
@@ -386,7 +386,7 @@ const Header = () => {
                 >
                   Profile
                 </MenuItem>
-                {currentUser.isAdmin && (
+                {currentUser && currentUser.isAdmin && (
                   <MenuItem
                     component={Link}
                     to="/admin"

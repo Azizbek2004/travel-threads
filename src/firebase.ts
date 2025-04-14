@@ -4,13 +4,13 @@ import { getFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
 
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-  appId: import.meta.env.VITE_FIREBASE_APP_ID,
-  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID,
+  apiKey: "AIzaSyB1UmksGKpf2kG9_kCIaPns1CNpf16ToBc",
+  authDomain: "my-travel-app-43469.firebaseapp.com",
+  projectId: "my-travel-app-43469",
+  storageBucket: "my-travel-app-43469.firebasestorage.app",
+  messagingSenderId: "781957445432",
+  appId: "1:781957445432:web:550abf0ebf66f6814533cd",
+  measurementId: "G-1CC5M72D0V",
 };
 
 const app = initializeApp(firebaseConfig);

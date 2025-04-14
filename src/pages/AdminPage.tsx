@@ -43,7 +43,7 @@ import {
   Refresh,
 } from "@mui/icons-material";
 import { useAuth } from "../hooks/useAuth";
-import { Navigate } from "react-router-dom";
+import { Navigate, useNavigate } from "react-router-dom";
 import {
   getUsers,
   blockUser,
@@ -60,6 +60,7 @@ import {
 
 const AdminPage = () => {
   const { currentUser } = useAuth();
+  const navigate = useNavigate();
   const [tabValue, setTabValue] = useState(0);
   const [users, setUsers] = useState<any[]>([]);
   const [reports, setReports] = useState<any[]>([]);
@@ -84,24 +85,26 @@ const AdminPage = () => {
 
   useEffect(() => {
     const checkAdminStatus = async () => {
-      if (!currentUser) return;
+      if (!currentUser) {
+        navigate("/login");
+        return;
+      }
 
-      try {
-        // In a real app, you would check if the user has admin privileges
-        // For now, we'll assume the current user is an admin
+      // Check if the user has admin privileges
+      if (currentUser.isAdmin) {
+        console.log("User is an admin, loading admin data");
         setIsAdmin(true);
-
-        // Load initial data based on the active tab
         loadTabData(tabValue);
-      } catch (error) {
-        console.error("Error checking admin status:", error);
-        setError("Failed to verify admin status");
+      } else {
+        console.log("User is not an admin, redirecting to home");
+        setError("You don't have admin privileges");
         setIsAdmin(false);
+        navigate("/");
       }
     };
 
     checkAdminStatus();
-  }, [currentUser]);
+  }, [currentUser, navigate]);
 
   const loadTabData = async (tab: number) => {
     setLoading(true);
@@ -155,11 +158,7 @@ const AdminPage = () => {
         )
       );
 
-      setSuccess(`User ${selectedUser.displayName}  blockReason } : user
-        )
-      )
-      
-      setSuccess(\`User ${selectedUser.displayName} has been blocked`);
+      setSuccess(`User ${selectedUser.displayName} has been blocked`);
       setBlockDialogOpen(false);
       setBlockReason("");
     } catch (error) {
@@ -272,11 +271,12 @@ const AdminPage = () => {
     }
   };
 
-  // If not logged in or not admin, redirect to home
+  // If not logged in, redirect to login
   if (!currentUser) {
     return <Navigate to="/login" />;
   }
 
+  // If not admin, redirect to home
   if (!isAdmin) {
     return <Navigate to="/" />;
   }
@@ -602,6 +602,29 @@ const AdminPage = () => {
                           </Box>
                         )}
                       </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          )}
+
+          {/* Logs Tab */}
+          {tabValue === 3 && (
+            <TableContainer component={Paper}>
+              <Table>
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Action</TableCell>
+                    <TableCell>Admin</TableCell>
+                    <TableCell>Details</TableCell>
+                    <TableCell>Date</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {logs.map((log) => (
+                    <TableRow key={log.id}>
+                      <TableCell>{log.action.replace(/_/g, " ")}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>

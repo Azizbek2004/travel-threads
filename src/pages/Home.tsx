@@ -333,8 +333,11 @@ const Home = () => {
     >
       {!isMobileOrTablet && (
         <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
-          <FlightTakeoff
-            sx={{ mr: 1, color: "primary.main", fontSize: "2rem" }}
+          <img
+            src="/logo.svg"
+            alt=""
+            height="36px"
+            style={{ marginRight: "12px" }}
           />
           <Typography variant="h4">Beyond Borders</Typography>
         </Box>
@@ -532,7 +535,6 @@ const Home = () => {
             alignItems: "center",
             px: 2,
             mb: 1,
-            width: "100%",
           }}
         >
           <Typography variant="body2" color="text.secondary">

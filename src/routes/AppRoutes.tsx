@@ -20,6 +20,7 @@ import { Login, Signup } from "../components/Auth";
 import { useAuth } from "../hooks/useAuth";
 import MessageSharePage from "../pages/MessageSharePage";
 import NotificationsPage from "../pages/NotificationsPage";
+import EditEventPage from "../pages/EditEventPage";
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { currentUser, loading } = useAuth();
@@ -30,6 +31,28 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 
   if (!currentUser) {
     return <Navigate to="/login" replace />;
+  }
+
+  return <>{children}</>;
+};
+
+// Admin route protection
+const AdminRoute = ({ children }: { children: React.ReactNode }) => {
+  const { currentUser, loading } = useAuth();
+
+  if (loading) {
+    return <div>Loading...</div>;
+  }
+
+  // Check if user is logged in and has admin privileges
+  if (!currentUser) {
+    return <Navigate to="/login" replace />;
+  }
+
+  // Check for admin status
+  if (!currentUser.isAdmin) {
+    console.log("User is not an admin, redirecting to home");
+    return <Navigate to="/" replace />;
   }
 
   return <>{children}</>;
@@ -84,11 +107,19 @@ const AppRoutes = () => (
       }
     />
     <Route
-      path="/admin"
+      path="/edit-event/:id"
       element={
         <ProtectedRoute>
-          <AdminPage />
+          <EditEventPage />
         </ProtectedRoute>
+      }
+    />
+    <Route
+      path="/admin"
+      element={
+        <AdminRoute>
+          <AdminPage />
+        </AdminRoute>
       }
     />
     <Route

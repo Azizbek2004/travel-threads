@@ -13,6 +13,7 @@ import {
   writeBatch,
   deleteDoc,
   increment,
+  limit as firestoreLimit,
 } from "firebase/firestore";
 
 // Notification types
@@ -101,13 +102,14 @@ export const createNotification = async (notificationData: {
 };
 
 // Get user notifications
-export const getUserNotifications = async (userId: string, limit = 20) => {
+export const getUserNotifications = async (userId: string, limitCount = 20) => {
   try {
+    // Fix: Use firestoreLimit instead of limit directly
     const notificationsQuery = query(
       collection(db, "notifications"),
       where("userId", "==", userId),
       orderBy("createdAt", "desc"),
-      limit(limit)
+      firestoreLimit(limitCount)
     );
 
     const snapshot = await getDocs(notificationsQuery);
